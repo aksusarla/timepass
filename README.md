@@ -1,36 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Timepass
 
-## Getting Started
+Desi games for get-togethers and boring afternoons. First game: **Daily Cinema**,
+guess today's movie in 6 clues (emoji → plot → year & genre → hero → heroine →
+director), in Telugu, Hindi and Tamil. New movie every midnight IST.
 
-First, run the development server:
+## Run it on your laptop
+
+Needs Node.js 20.9 or newer (`node -v` to check).
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev        # open http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Other commands:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm test               # date and answer-matching tests
+npm run check:content  # validate puzzle files
+npm run lint
+npm run build          # what Vercel runs (validates content first)
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Put it online (one-time, ~20 minutes, free)
 
-## Learn More
+1. **GitHub**: create a private repo `timepass`, then from this folder:
+   `git remote add origin https://github.com/<you>/timepass.git && git push -u origin main`
+2. **Vercel**: vercel.com → sign in with GitHub → Add New Project → pick the
+   repo → Deploy. You get a `timepass-xxxx.vercel.app` link. Every push to
+   `main` redeploys; every branch gets its own preview link.
+3. **Analytics** (optional but do it before friends test):
+   - PostHog: create a project, copy the Project API key.
+   - Microsoft Clarity: add a project, copy the Project ID.
+   - Vercel → Project → Settings → Environment Variables: add the values from
+     `.env.example`, then redeploy.
+4. **Domain**: later, once the name is final. Vercel → Settings → Domains.
 
-To learn more about Next.js, take a look at the following resources:
+## Adding puzzles
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Edit `src/content/cinema/<lang>.json`. Puzzles play in file order, one per day
+from the launch date in `src/lib/daily.ts`, then loop. Rules:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Write the plot yourself in simple words. Never copy synopses, dialogue or
+  lyrics. Names and years are facts and fine.
+- Don't put the title in the plot.
+- Add common spellings to `aliases` (e.g. "bahubali").
+- Keep `extraTitles` (decoys for autocomplete) at least as long as the puzzle list.
+- Run `npm run check:content`.
 
-## Deploy on Vercel
+Target before soft launch: 30+ puzzles per live language.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Working with Claude Code
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+`CLAUDE.md` has the project rules. Open this folder in Claude Code and ask
+for changes in plain English, e.g. "add a Kannada pack with these 10 movies"
+or "add a countdown to the next puzzle".

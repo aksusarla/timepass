@@ -1,0 +1,92 @@
+{
+  "language": "hi",
+  "puzzles": [
+    {
+      "id": "hi-3-idiots",
+      "title": "3 Idiots",
+      "aliases": ["three idiots", "3idiots"],
+      "year": 2009,
+      "clues": {
+        "emoji": "🎓 🔧 😂 🏔️",
+        "plot": "Two friends go looking for their long-lost college buddy, the one who taught them to chase what they love instead of marks.",
+        "genre": "Comedy drama",
+        "hero": "Aamir Khan",
+        "heroine": "Kareena Kapoor",
+        "director": "Rajkumar Hirani"
+      }
+    },
+    {
+      "id": "hi-andhadhun",
+      "title": "Andhadhun",
+      "aliases": ["andhadhun", "andhadun", "andha dhun"],
+      "year": 2018,
+      "clues": {
+        "emoji": "🎹 🕶️ 🔪 🐇",
+        "plot": "A pianist who pretends to be blind accidentally walks in on a murder, and now has to keep pretending.",
+        "genre": "Dark comedy thriller",
+        "hero": "Ayushmann Khurrana",
+        "heroine": "Radhika Apte",
+        "director": "Sriram Raghavan"
+      }
+    },
+    {
+      "id": "hi-dilwale-dulhania-le-jayenge",
+      "title": "Dilwale Dulhania Le Jayenge",
+      "aliases": ["ddlj", "dilwale dulhaniya le jayenge"],
+      "year": 1995,
+      "clues": {
+        "emoji": "🚆 🏔️ 🌻 💍 👨",
+        "plot": "Two young NRIs fall in love on a Europe trip, but her strict father has already fixed her marriage back in Punjab.",
+        "genre": "Romance",
+        "hero": "Shah Rukh Khan",
+        "heroine": "Kajol",
+        "director": "Aditya Chopra"
+      }
+    },
+    {
+      "id": "hi-lagaan",
+      "title": "Lagaan",
+      "aliases": ["lagaan once upon a time in india"],
+      "year": 2001,
+      "clues": {
+        "emoji": "🏏 🌾 ☔ 👑",
+        "plot": "Villagers who cannot pay their tax during a drought bet everything on a cricket match against their British rulers.",
+        "genre": "Period sports drama",
+        "hero": "Aamir Khan",
+        "heroine": "Gracy Singh",
+        "director": "Ashutosh Gowariker"
+      }
+    },
+    {
+      "id": "hi-sholay",
+      "title": "Sholay",
+      "aliases": [],
+      "year": 1975,
+      "clues": {
+        "emoji": "🐎 🔫 🏜️ 🤝",
+        "plot": "A retired police officer hires two small-time crooks to catch the dacoit who destroyed his family.",
+        "genre": "Action",
+        "hero": "Dharmendra and Amitabh Bachchan",
+        "heroine": "Hema Malini",
+        "director": "Ramesh Sippy"
+      }
+    }
+  ],
+  "extraTitles": [
+    "Dangal",
+    "PK",
+    "Zindagi Na Milegi Dobara",
+    "Kabhi Khushi Kabhie Gham",
+    "Gully Boy",
+    "Queen",
+    "Swades",
+    "Rang De Basanti",
+    "Chak De! India",
+    "Barfi!",
+    "Jab We Met",
+    "Taare Zameen Par",
+    "Munna Bhai M.B.B.S.",
+    "Kahaani",
+    "Stree"
+  ]
+}

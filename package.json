@@ -5,11 +5,15 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "prebuild": "node scripts/validate-content.mjs",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node --test src/lib/*.test.ts",
+    "check:content": "node scripts/validate-content.mjs"
   },
   "dependencies": {
     "next": "16.4.3",
+    "posthog-js": "^1.438.22",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
