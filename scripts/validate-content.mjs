@@ -1,63 +1,33 @@
-// Checks every cinema pack before a build. Run: npm run check:content
-// Catches the mistakes that break a day's puzzle: missing clues, duplicate
-// ids, answers that the autocomplete would not offer, a pool about to run out.
-import { readFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+// Checks the content bank before every build. Run: npm run check:content
+// Catches what breaks a round: missing clues, duplicate ids, a storyline that
+// gives away the title, autocomplete decoys missing.
+import { MOVIES, EXTRA_TITLES, LANGS } from "../src/content/movies.ts";
 
-const DIR = join(process.cwd(), "src/content/cinema");
-const CLUE_FIELDS = ["emoji", "plot", "genre", "hero", "heroine", "director"];
-const LAUNCH_DATE = "2026-11-01";
-const WARN_DAYS_LEFT = 14;
+const FIELDS = ["title", "storyline", "hero", "heroine", "director", "genre"];
+const TARGET = 60; // PRD: 60+ verified puzzles per language before beta
+const norm = (s) => s.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
 
 const errors = [];
-const warnings = [];
-const seenIds = new Set();
-
-const daysSinceLaunch = Math.max(
-  0,
-  Math.floor((Date.now() + 5.5 * 3600e3 - Date.parse(LAUNCH_DATE)) / 86400e3),
-);
-
-for (const file of readdirSync(DIR).filter((f) => f.endsWith(".json"))) {
-  const pack = JSON.parse(readFileSync(join(DIR, file), "utf8"));
-  const where = (msg) => `${file}: ${msg}`;
-
-  if (!Array.isArray(pack.puzzles) || pack.puzzles.length === 0) {
-    errors.push(where("no puzzles"));
-    continue;
-  }
-  if (`${pack.language}.json` !== file) {
-    errors.push(where(`"language" is "${pack.language}" but file is ${file}`));
-  }
-
-  pack.puzzles.forEach((p, i) => {
-    const at = `puzzle ${i + 1} (${p.id ?? "no id"})`;
-    if (!p.id?.startsWith(`${pack.language}-`)) errors.push(where(`${at}: id must start with "${pack.language}-"`));
-    if (seenIds.has(p.id)) errors.push(where(`${at}: duplicate id`));
-    seenIds.add(p.id);
-    if (!p.title) errors.push(where(`${at}: missing title`));
-    if (!Number.isInteger(p.year) || p.year < 1913 || p.year > 2030) errors.push(where(`${at}: bad year`));
-    if (!Array.isArray(p.aliases)) errors.push(where(`${at}: aliases must be a list`));
-    for (const f of CLUE_FIELDS) {
-      if (!p.clues?.[f]?.trim()) errors.push(where(`${at}: missing clue "${f}"`));
-    }
-    if (p.clues?.plot && p.title && p.clues.plot.toLowerCase().includes(p.title.toLowerCase())) {
-      errors.push(where(`${at}: plot clue gives away the title`));
-    }
-  });
-
-  if ((pack.extraTitles ?? []).length < pack.puzzles.length) {
-    warnings.push(where("fewer decoy titles than puzzles; autocomplete may give answers away"));
-  }
-  const daysLeft = pack.puzzles.length - daysSinceLaunch;
-  if (daysLeft < WARN_DAYS_LEFT) {
-    warnings.push(where(`${Math.max(0, daysLeft)} days of fresh puzzles left before repeats; add more (target 30+)`));
-  }
+const ids = new Set();
+for (const m of MOVIES) {
+  const at = `${m.id}`;
+  if (!m.id.startsWith(`${m.lang}-`)) errors.push(`${at}: id must start with "${m.lang}-"`);
+  if (ids.has(m.id)) errors.push(`${at}: duplicate id`);
+  ids.add(m.id);
+  for (const f of FIELDS) if (!String(m[f] ?? "").trim()) errors.push(`${at}: missing ${f}`);
+  if (!Number.isInteger(m.year) || m.year < 1913 || m.year > 2030) errors.push(`${at}: bad year`);
+  if (norm(m.storyline).includes(norm(m.title))) errors.push(`${at}: storyline gives away the title`);
+  const words = m.storyline.split(/\s+/).length;
+  if (words > 35) errors.push(`${at}: storyline is ${words} words (keep it under 35)`);
+  if (EXTRA_TITLES[m.lang].some((t) => norm(t) === norm(m.title))) errors.push(`${at}: also listed as a decoy title`);
 }
 
-for (const w of warnings) console.warn("⚠️ ", w);
+for (const l of LANGS) {
+  const n = MOVIES.filter((m) => m.lang === l.code).length;
+  if (n < TARGET) console.warn(`⚠️  ${l.name}: ${n} puzzles (beta target ${TARGET})`);
+}
 if (errors.length) {
   for (const e of errors) console.error("❌", e);
   process.exit(1);
 }
-console.log(`✅ Content OK (${seenIds.size} puzzles)`);
+console.log(`✅ Content OK (${MOVIES.length} movies)`);

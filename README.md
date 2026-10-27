@@ -1,57 +1,68 @@
 # Timepass
 
-Desi games for get-togethers and boring afternoons. First game: **Daily Cinema**,
-guess today's movie in 6 clues (emoji → plot → year & genre → hero → heroine →
-director), in Telugu, Hindi and Tamil. New movie every midnight IST.
+Original movie games for Indian get-togethers, in Telugu and Tamil. No install,
+no login: open the link and play. Product spec: `claude/timepass-prd-v1.md` in
+the Timepass project.
+
+**Prototype v0.2 (front end only, same room):**
+- **Movie Guess**: host-led on one phone. 4-clue ladder (story, hero, heroine,
+  director), 20-second timer, 4/3/2/1 points, teams, undo, scoreboard.
+- **Imposter Movie**: pass-and-play on one phone. Secret picks, identical
+  reveal screens, two clue rounds, vote, steal, PRD scoring.
+- **Rail Gaadi**: listed as proposed.
+- **Online mode** (everyone on their own phone) needs the room server. It is
+  the next build step, not in this prototype.
+
+Design follows aksusarla.github.io (same tokens, Inter, light/dark switch).
 
 ## Run it on your laptop
 
-Needs Node.js 20.9 or newer (`node -v` to check).
+Needs Node.js 20.9 or newer.
 
 ```bash
 npm install
-npm run dev        # open http://localhost:3000
+npm run dev        # http://localhost:3000
 ```
-
-Other commands:
 
 ```bash
-npm test               # date and answer-matching tests
-npm run check:content  # validate puzzle files
+npm test               # matching + imposter-pick tests
+npm run check:content  # validate the movie bank
 npm run lint
-npm run build          # what Vercel runs (validates content first)
+npm run build          # static site in ./out
 ```
 
-## Put it online (one-time, ~20 minutes, free)
+## Publish on GitHub Pages (free, ~5 minutes, once)
 
-1. **GitHub**: create a private repo `timepass`, then from this folder:
-   `git remote add origin https://github.com/<you>/timepass.git && git push -u origin main`
-2. **Vercel**: vercel.com → sign in with GitHub → Add New Project → pick the
-   repo → Deploy. You get a `timepass-xxxx.vercel.app` link. Every push to
-   `main` redeploys; every branch gets its own preview link.
-3. **Analytics** (optional but do it before friends test):
-   - PostHog: create a project, copy the Project API key.
-   - Microsoft Clarity: add a project, copy the Project ID.
-   - Vercel → Project → Settings → Environment Variables: add the values from
-     `.env.example`, then redeploy.
-4. **Domain**: later, once the name is final. Vercel → Settings → Domains.
+1. On github.com create a new **public** repo named `timepass` (no README).
+2. From this folder:
+   ```bash
+   git remote add origin https://github.com/aksusarla/timepass.git
+   git push -u origin main
+   ```
+3. Repo **Settings > Pages > Build and deployment > Source: GitHub Actions**.
+4. The **Deploy to GitHub Pages** workflow runs on every push to `main`. After
+   about 2 minutes the site is live at **https://aksusarla.github.io/timepass/**
+   (the link also appears on the workflow run).
 
-## Adding puzzles
+Optional analytics: repo **Settings > Secrets and variables > Actions >
+Variables**, add `NEXT_PUBLIC_POSTHOG_KEY` and `NEXT_PUBLIC_CLARITY_ID`, then
+re-run the workflow.
 
-Edit `src/content/cinema/<lang>.json`. Puzzles play in file order, one per day
-from the launch date in `src/lib/daily.ts`, then loop. Rules:
+Free GitHub Pages needs a public repo. To keep the code private, use Vercel
+instead (import the repo at vercel.com; no settings needed).
 
-- Write the plot yourself in simple words. Never copy synopses, dialogue or
-  lyrics. Names and years are facts and fine.
-- Don't put the title in the plot.
-- Add common spellings to `aliases` (e.g. "bahubali").
-- Keep `extraTitles` (decoys for autocomplete) at least as long as the puzzle list.
-- Run `npm run check:content`.
+## Single-file preview
 
-Target before soft launch: 30+ puzzles per live language.
+`node scripts/inline-build.mjs out/index.html dist/timepass.html` bundles the
+built site into one HTML file, used for the claude.ai preview link.
+
+## Adding movies
+
+Edit `src/content/movies.ts`. Storylines are our own words, 20–30 simple words,
+never the title. Names and years are facts. Add common English spellings to
+`aliases`. Run `npm run check:content`. Beta target: 60+ per language.
 
 ## Working with Claude Code
 
-`CLAUDE.md` has the project rules. Open this folder in Claude Code and ask
-for changes in plain English, e.g. "add a Kannada pack with these 10 movies"
-or "add a countdown to the next puzzle".
+`CLAUDE.md` holds the project rules. Open this folder in Claude Code and ask
+for changes in plain English.
