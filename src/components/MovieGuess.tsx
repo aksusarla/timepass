@@ -6,7 +6,7 @@ import { shuffle } from "@/lib/game";
 import { track } from "@/lib/analytics";
 import { usePersistentState } from "@/lib/store";
 import { beep, buzz, unlockAudio, useWakeLock } from "@/lib/device";
-import { Board, Countdown, GameTools, HowToPlay, NameList, Seg, speak, stopSpeaking } from "./ui";
+import { Board, Countdown, GameTools, HowToPlay, NameList, Seg, Words, speak, stopSpeaking } from "./ui";
 
 // PRD section 7: storyline -> hero -> heroine -> director -> reveal.
 const CLUES: { key: keyof Movie; label: string; pts: number }[] = [
@@ -127,7 +127,9 @@ function SetupScreen({ setup, setSetup, onStart }: { setup: Setup; setSetup: (s:
     <div className="rise setup">
       <div className="screen-head">
         <span className="meta">Movie Guess</span>
-        <h2 className="title">Guess the film from the clues.</h2>
+        <h2 className="title">
+          <Words text="Guess the film from the clues." />
+        </h2>
         <p className="muted">One phone runs the game. Read each clue out, and tap the team that shouts the right answer first.</p>
       </div>
 
@@ -326,7 +328,9 @@ function Round({
         <div className="round-grid">
           <div className="round-main panel">
             <span className="label">{award.winner ? `${award.winner} got it · +${award.points}` : "Nobody got it"}</span>
-            <div className="reveal-title">{movie.title}</div>
+            <div className="reveal-title">
+              <Words text={movie.title} />
+            </div>
             <div className="facts">
               <span>
                 <b>{movie.year}</b> · {movie.genre}
@@ -378,9 +382,9 @@ function Final({ scores, onAgain, onSetup }: { scores: { name: string; score: nu
       <div className="screen-head">
         <span className="meta">Movie Guess · Final scores</span>
         <div className="pass">
-          {headline}
+          <Words text={headline} />
           <span className="g" style={{ display: "block" }}>
-            Another round?
+            <Words text="Another round?" />
           </span>
         </div>
       </div>

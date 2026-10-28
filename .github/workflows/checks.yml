@@ -1,0 +1,33 @@
+# Runs on every pull request so a broken change is caught before Abhi reviews
+# it. Nothing is deployed from here; the live site only updates from main.
+name: Checks
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run lint
+      - name: Build (also validates the movie bank)
+        run: npm run build
+        env:
+          BASE_PATH: /${{ github.event.repository.name }}
+      - name: Upload the built site for a quick look
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-preview
+          path: out
+          retention-days: 7

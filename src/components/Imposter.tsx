@@ -6,7 +6,7 @@ import { normalizeTitle, pickImposterRound, shuffle } from "@/lib/game";
 import { track } from "@/lib/analytics";
 import { usePersistentState } from "@/lib/store";
 import { unlockAudio, useWakeLock } from "@/lib/device";
-import { Board, GameTools, HoldReveal, HowToPlay, NameList, Seg, TitleInput } from "./ui";
+import { Board, GameTools, HoldReveal, HowToPlay, NameList, Seg, TitleInput, Words } from "./ui";
 
 // PRD section 8, played pass-and-play on one phone. The online version will
 // hold the real movie and the imposter on the server instead.
@@ -81,7 +81,9 @@ export default function Imposter() {
       <div className="rise setup">
         <div className="screen-head">
           <span className="meta">Imposter Movie</span>
-          <h2 className="title">Find the player with the wrong movie.</h2>
+          <h2 className="title">
+            <Words text="Find the player with the wrong movie." />
+          </h2>
           <p className="muted">Pass one phone around. Everyone secretly picks a film, then one player ends up seeing a different one.</p>
         </div>
 
@@ -278,7 +280,9 @@ export default function Imposter() {
       <div className="round-grid">
         <div className="round-main panel stack">
           <span className="label">The real movie · {name(round.ownerIdx)}’s pick</span>
-          <div className="reveal-title">{round.realMovie}</div>
+          <div className="reveal-title">
+            <Words text={round.realMovie} />
+          </div>
           <div className="facts">
             <span>
               Imposter <b>{imp}</b>
@@ -343,7 +347,9 @@ function Head({ step, sub, round, tools }: { step: string; sub: string; round: n
         </span>
         {tools}
       </div>
-      <h2 className="title">{step}</h2>
+      <h2 className="title">
+        <Words text={step} />
+      </h2>
     </div>
   );
 }
@@ -352,8 +358,12 @@ function PassTo({ name, action, onGo }: { name: string; action: string; onGo: ()
   return (
     <div className="panel stack">
       <div className="pass">
-        <span className="g">Pass the phone to</span>
-        <span style={{ display: "block" }}>{name}</span>
+        <span className="g">
+          <Words text="Pass the phone to" />
+        </span>
+        <span style={{ display: "block" }}>
+          <Words text={name} />
+        </span>
       </div>
       <p className="muted">Everyone else, look away.</p>
       <button className="btn block xl" onClick={onGo}>

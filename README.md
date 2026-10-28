@@ -55,6 +55,21 @@ re-run the workflow.
 Free GitHub Pages needs a public repo. To keep the code private, use Vercel
 instead (import the repo at vercel.com; no settings needed).
 
+## How changes get approved
+
+Nothing reaches the live site without Abhi's approval:
+
+- Contributors (e.g. design) work on a branch and open a pull request.
+  `DESIGN.md` explains the flow without needing the command line.
+- `.github/CODEOWNERS` names Abhi as the reviewer for every file.
+- The **Checks** workflow runs tests, lint and a build on every pull request.
+- The live site deploys only from `main`.
+
+One-time setup on GitHub (owner only): Settings > Rules > Rulesets > New
+branch ruleset for `main`. Require a pull request with 1 approval and review
+from Code Owners, require the `checks` status check, and block force pushes.
+Add yourself to the bypass list so you can still push your own fixes.
+
 ## Single-file preview
 
 `node scripts/inline-build.mjs out/index.html dist/timepass.html` bundles the

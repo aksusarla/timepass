@@ -1,38 +1,5 @@
-/* Timepass uses the same design language as aksusarla.github.io:
-   a monochrome spec sheet. Indexed sections, heavy Inter, thin rules,
-   grey text that turns black where it matters, one green "live" dot. */
-
-:root {
-  --bg: #ffffff;
-  --fg: #0a0a0a;
-  --muted: #6b6b6b;
-  --faint: #a3a3a3;
-  --ghost: #cfcfcf;
-  --line: #e4e4e4;
-  --line-strong: #0a0a0a;
-  --chip: #f2f2f2;
-  --accent: #1fa463;
-  --danger: #c2362b;
-  --font: "Inter", "Noto Sans Telugu", "Noto Sans Tamil", ui-sans-serif, system-ui, -apple-system,
-    "Segoe UI", Roboto, Arial, sans-serif;
-  --step-0: 0.8125rem;
-  --step-1: 0.9375rem;
-  --step-2: 1.125rem;
-  --step-3: 1.5rem;
-  --step-4: clamp(2rem, 5vw, 3.25rem);
-  --step-5: clamp(2.75rem, 11vw, 6.5rem);
-  --ease: cubic-bezier(0.2, 0.7, 0.1, 1);
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #0a0a0a; --fg: #f5f5f5; --muted: #9a9a9a; --faint: #5c5c5c; --ghost: #333333;
-    --line: #242424; --line-strong: #f5f5f5; --chip: #171717; --danger: #ef6b5f; color-scheme: dark;
-  }
-}
-:root[data-theme="dark"] {
-  --bg: #0a0a0a; --fg: #f5f5f5; --muted: #9a9a9a; --faint: #5c5c5c; --ghost: #333333;
-  --line: #242424; --line-strong: #f5f5f5; --chip: #171717; --danger: #ef6b5f; color-scheme: dark;
-}
+/* Layout and components. Colours, fonts, sizes and motion live in
+   tokens.css: change the look there, not here. */
 
 * { box-sizing: border-box; }
 body {
@@ -260,4 +227,13 @@ footer { border-top: 1px solid var(--line); margin-top: 48px; padding-top: 16px;
   .reveal-title { font-size: clamp(3rem, 6vw, 5.5rem); }
   .count { width: 88px; height: 88px; }
   .count span { font-size: 1.875rem; }
+}
+
+/* ---------- Italic on hover (portfolio signature) ---------- */
+/* Headings: each word turns italic on its own. Links: the whole label.
+   Only on devices with a real pointer; phones have no hover. */
+.wi { display: inline-block; padding-right: 0.04em; }
+@media (hover: hover) {
+  .wi:hover { font-style: italic; }
+  .wordmark:hover, .bar nav a:hover, .link:hover, .gcard:hover h3, .chipbtn:hover, .players li .name:hover, .sugg button:hover, footer span:hover { font-style: italic; }
 }

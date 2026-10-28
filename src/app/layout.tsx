@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Analytics from "@/components/Analytics";
+import "./tokens.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -35,7 +36,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* eslint-disable-next-line @next/next/no-page-custom-font */}
         <link
           rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@300..900&family=Noto+Sans+Tamil:wght@400..800&family=Noto+Sans+Telugu:wght@400..800&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300..900;1,300..900&family=Noto+Sans+Tamil:wght@400..800&family=Noto+Sans+Telugu:wght@400..800&display=swap"
         />
       </head>
       <body>

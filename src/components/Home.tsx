@@ -1,7 +1,7 @@
 "use client";
 
 import { MOVIES, LANGS } from "@/content/movies";
-import { Arrow, href, useSavedGame } from "./ui";
+import { Arrow, Words, href, useSavedGame } from "./ui";
 import { MG_KEY } from "./MovieGuess";
 import { IM_KEY } from "./Imposter";
 
@@ -26,15 +26,19 @@ export default function Home() {
     <>
       <div className="intro rise">
         <h1>
-          Movie games for get-togethers.
-          <span className="g">No app, no login. Just play.</span>
+          <Words text="Movie games for get-togethers." />
+          <span className="g">
+            <Words text="No app, no login. Just play." />
+          </span>
         </h1>
       </div>
 
       <div className="cards">
         <a className="gcard" href={href("movie-guess")}>
           <div className="gcard-top">
-            <h3>Movie Guess</h3>
+            <h3>
+              <Words text="Movie Guess" />
+            </h3>
             {mgResume ? <span className="status live">In progress</span> : <span className="status">Teams</span>}
           </div>
           <p>Guess the film from clues that get easier: the story, then the hero, heroine and director. Guess early, score more.</p>
@@ -50,7 +54,9 @@ export default function Home() {
 
         <a className="gcard" href={href("imposter")}>
           <div className="gcard-top">
-            <h3>Imposter Movie</h3>
+            <h3>
+              <Words text="Imposter Movie" />
+            </h3>
             {imResume ? <span className="status live">In progress</span> : <span className="status">Pass & play</span>}
           </div>
           <p>Everyone secretly picks a film. One player ends up seeing the wrong one, and they might not even know it. Give clues, then catch them.</p>
@@ -67,11 +73,15 @@ export default function Home() {
 
       <section className="more">
         <div className="soon">
-          <h4>Rail Gaadi</h4>
+          <h4>
+            <Words text="Rail Gaadi" />
+          </h4>
           <p>Link each film to the last through a shared star or director, before the timer runs out. Coming after playtests.</p>
         </div>
         <div className="soon">
-          <h4>Play from every phone</h4>
+          <h4>
+            <Words text="Play from every phone" />
+          </h4>
           <p>Online rooms, so everyone can join from their own phone, wherever they are. Coming soon. For now, one phone runs the game.</p>
         </div>
       </section>

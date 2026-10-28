@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { Fragment, useMemo, useState, useSyncExternalStore } from "react";
 import { suggest } from "@/lib/game";
 import { loadState, saveState } from "@/lib/store";
 import { canFullscreen, toggleFullscreen } from "@/lib/device";
@@ -480,5 +480,22 @@ export function useSavedGame(key: string): string | null {
       }
     },
     () => null,
+  );
+}
+
+/* ---------- Word-by-word italic on hover (same effect as the portfolio) ---------- */
+
+/** Splits text into words that each turn italic under the pointer. */
+export function Words({ text }: { text: string }) {
+  const words = text.trim().split(/\s+/);
+  return (
+    <>
+      {words.map((w, i) => (
+        <Fragment key={i}>
+          <span className="wi">{w}</span>
+          {i < words.length - 1 ? " " : null}
+        </Fragment>
+      ))}
+    </>
   );
 }
