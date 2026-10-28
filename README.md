@@ -4,12 +4,16 @@ Original movie games for Indian get-togethers, in Telugu and Tamil. No install,
 no login: open the link and play. Product spec: `claude/timepass-prd-v1.md` in
 the Timepass project.
 
-**Prototype v0.2 (front end only, same room):**
+**Prototype v0.3 (front end only, same room):**
 - **Movie Guess**: host-led on one phone. 4-clue ladder (story, hero, heroine,
   director), 20-second timer, 4/3/2/1 points, teams, undo, scoreboard.
 - **Imposter Movie**: pass-and-play on one phone. Secret picks, identical
   reveal screens, two clue rounds, vote, steal, PRD scoring.
 - **Rail Gaadi**: listed as proposed.
+- **UX (v0.3)**: games-first home, one-tap start, tap-to-rename teams,
+  games saved on the phone (refresh-safe, resume card), screen kept awake,
+  countdown ring with sound and buzz, press-and-hold secret cards, first-time
+  how-to-play, two-column layout on tablets/laptops, full-screen button.
 - **Online mode** (everyone on their own phone) needs the room server. It is
   the next build step, not in this prototype.
 

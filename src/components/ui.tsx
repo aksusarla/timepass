@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import { suggest } from "@/lib/game";
+import { loadState, saveState } from "@/lib/store";
+import { canFullscreen, toggleFullscreen } from "@/lib/device";
 
 /* ---------- Hash routing: works on GitHub Pages and any static host ---------- */
 
@@ -24,9 +26,9 @@ export const href = (r: Route) => (r === "home" ? "#" : `#${r}`);
 /* ---------- Top bar + theme switch (mirrors the portfolio) ---------- */
 
 export function Bar({ route }: { route: Route | null }) {
-  const links: [Route, string, string][] = [
-    ["movie-guess", "01", "Movie Guess"],
-    ["imposter", "02", "Imposter"],
+  const links: [Route, string][] = [
+    ["movie-guess", "Movie Guess"],
+    ["imposter", "Imposter"],
   ];
   return (
     <header className="bar">
@@ -35,9 +37,8 @@ export function Bar({ route }: { route: Route | null }) {
           timepass<span>.</span>
         </a>
         <nav aria-label="Games">
-          {links.map(([r, n, label]) => (
+          {links.map(([r, label]) => (
             <a key={r} href={href(r)} className={route === r ? "on" : undefined}>
-              <span>{n}</span>
               {label}
             </a>
           ))}
@@ -53,31 +54,28 @@ function currentTheme(): "light" | "dark" {
   if (t === "light" || t === "dark") return t;
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
+function subscribeTheme(cb: () => void) {
+  const mq = window.matchMedia("(prefers-color-scheme: dark)");
+  mq.addEventListener("change", cb);
+  window.addEventListener("timepass-theme", cb);
+  return () => {
+    mq.removeEventListener("change", cb);
+    window.removeEventListener("timepass-theme", cb);
+  };
+}
 
 function ThemeToggle() {
-  const [mode, setMode] = useState<"light" | "dark" | null>(null);
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const paint = () => setMode(currentTheme());
-    paint();
-    mq.addEventListener("change", paint);
-    return () => mq.removeEventListener("change", paint);
-  }, []);
+  const mode = useSyncExternalStore(subscribeTheme, currentTheme, () => null);
   function flip() {
     const next = currentTheme() === "dark" ? "light" : "dark";
     document.documentElement.setAttribute("data-theme", next);
     try {
       localStorage.setItem("timepass:theme", next);
     } catch {}
-    setMode(next);
+    window.dispatchEvent(new Event("timepass-theme"));
   }
   return (
-    <button
-      type="button"
-      className="theme"
-      onClick={flip}
-      aria-label={`Switch to ${mode === "dark" ? "light" : "dark"} mode`}
-    >
+    <button type="button" className="theme" onClick={flip} aria-label={`Switch to ${mode === "dark" ? "light" : "dark"} mode`}>
       {mode === "light" ? (
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
@@ -95,7 +93,7 @@ function ThemeToggle() {
 export function Arrow() {
   return (
     <svg viewBox="0 0 16 16" aria-hidden="true">
-      <path d="M4 12 12 4M6 4h6v6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -116,13 +114,7 @@ export function Seg<T extends string | number>({
   return (
     <div className="seg" role="group" aria-label={label}>
       {options.map((o) => (
-        <button
-          key={String(o.value)}
-          type="button"
-          aria-pressed={o.value === value}
-          disabled={o.disabled}
-          onClick={() => onChange(o.value)}
-        >
+        <button key={String(o.value)} type="button" aria-pressed={o.value === value} disabled={o.disabled} onClick={() => onChange(o.value)}>
           {o.label}
         </button>
       ))}
@@ -219,15 +211,15 @@ export function stopSpeaking() {
 
 /* ---------- Scoreboard ---------- */
 
-export function Board({ rows }: { rows: { name: string; score: number }[] }) {
+export function Board({ rows, big = false }: { rows: { name: string; score: number }[]; big?: boolean }) {
   const top = Math.max(...rows.map((r) => r.score));
   const sorted = [...rows].sort((a, b) => b.score - a.score);
   return (
-    <div className="board">
+    <div className={`board${big ? " big" : ""}`}>
       {sorted.map((r, i) => (
         <div key={r.name} className={`r${r.score === top && top > 0 ? " lead" : ""}`}>
-          <span className="n">{String(i + 1).padStart(2, "0")}</span>
-          <span style={{ fontWeight: 700 }}>{r.name}</span>
+          <span className="n">{i + 1}</span>
+          <span className="who">{r.name}</span>
           <span className="s">{r.score}</span>
         </div>
       ))}
@@ -235,7 +227,7 @@ export function Board({ rows }: { rows: { name: string; score: number }[] }) {
   );
 }
 
-/** Editable list of names: teams in Movie Guess, players in Imposter. */
+/** Editable list of names: teams in Movie Guess, players in Imposter. Tap a name to rename it. */
 export function NameList({
   names,
   setNames,
@@ -250,29 +242,72 @@ export function NameList({
   noun: string;
 }) {
   const [draft, setDraft] = useState("");
+  const [editing, setEditing] = useState<number | null>(null);
+  const [editText, setEditText] = useState("");
   const clean = draft.trim().slice(0, 16);
-  const dup = names.some((n) => n.toLowerCase() === clean.toLowerCase());
+  const taken = (s: string, except = -1) => names.some((n, i) => i !== except && n.toLowerCase() === s.toLowerCase());
+
+  function saveEdit(i: number) {
+    const v = editText.trim().slice(0, 16);
+    if (v.length >= 2 && !taken(v, i)) setNames(names.map((n, j) => (j === i ? v : n)));
+    setEditing(null);
+  }
+
   return (
     <div className="stack">
-      <ul className="players">
-        {names.map((n, i) => (
-          <li key={n}>
-            <span className="n">{String(i + 1).padStart(2, "0")}</span>
-            <span className="name">{n}</span>
-            {names.length > min && (
-              <button type="button" className="x" aria-label={`Remove ${n}`} onClick={() => setNames(names.filter((x) => x !== n))}>
-                ×
-              </button>
-            )}
-          </li>
-        ))}
-      </ul>
+      {names.length > 0 && (
+        <ul className="players">
+          {names.map((n, i) => (
+            <li key={n}>
+              {editing === i ? (
+                <form
+                  className="rename"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    saveEdit(i);
+                  }}
+                >
+                  <input
+                    className="input"
+                    value={editText}
+                    maxLength={16}
+                    autoFocus
+                    onChange={(e) => setEditText(e.target.value)}
+                    onBlur={() => saveEdit(i)}
+                    aria-label={`Rename ${n}`}
+                  />
+                </form>
+              ) : (
+                <button
+                  type="button"
+                  className="name"
+                  onClick={() => {
+                    setEditing(i);
+                    setEditText(n);
+                  }}
+                  aria-label={`Rename ${n}`}
+                >
+                  {n}
+                  <span className="edit" aria-hidden>
+                    Edit
+                  </span>
+                </button>
+              )}
+              {names.length > min && editing !== i && (
+                <button type="button" className="x" aria-label={`Remove ${n}`} onClick={() => setNames(names.filter((x) => x !== n))}>
+                  ×
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
       {names.length < max && (
         <form
-          className="row"
+          className="row add"
           onSubmit={(e) => {
             e.preventDefault();
-            if (clean.length >= 2 && !dup) {
+            if (clean.length >= 2 && !taken(clean)) {
               setNames([...names, clean]);
               setDraft("");
             }
@@ -280,18 +315,170 @@ export function NameList({
         >
           <input
             className="input"
-            style={{ flex: "1 1 160px" }}
             value={draft}
             maxLength={16}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder={`Add ${noun} (2–16 letters)`}
+            placeholder={`Add ${noun}`}
             aria-label={`Add ${noun}`}
+            enterKeyHint="enter"
           />
-          <button className="btn ghost" type="submit" disabled={clean.length < 2 || dup}>
+          <button className="btn ghost" type="submit" disabled={clean.length < 2 || taken(clean)}>
             Add
           </button>
         </form>
       )}
     </div>
+  );
+}
+
+/* ---------- How to play: shown the first time, reopenable ---------- */
+
+export function HowToPlay({ id, title, steps }: { id: string; title: string; steps: string[] }) {
+  const key = `seen-rules:${id}`;
+  const [open, setOpen] = useState(() => !loadState<boolean>(key, false));
+  function close() {
+    saveState(key, true);
+    setOpen(false);
+  }
+  if (!open) {
+    return (
+      <button type="button" className="link" onClick={() => setOpen(true)}>
+        How to play
+      </button>
+    );
+  }
+  return (
+    <div className="rules rise" role="note">
+      <span className="label">{title}</span>
+      <ol>
+        {steps.map((s) => (
+          <li key={s}>{s}</li>
+        ))}
+      </ol>
+      <button type="button" className="btn ghost" onClick={close}>
+        Got it
+      </button>
+    </div>
+  );
+}
+
+/* ---------- Countdown ring ---------- */
+
+export function Countdown({ left, total }: { left: number; total: number }) {
+  const r = 26;
+  const c = 2 * Math.PI * r;
+  const low = left <= 5;
+  return (
+    <div className={`count${low ? " low" : ""}${left === 0 ? " done" : ""}`} role="timer" aria-label={`${left} seconds left`}>
+      <svg viewBox="0 0 64 64" aria-hidden>
+        <circle cx="32" cy="32" r={r} className="track" />
+        <circle cx="32" cy="32" r={r} className="arc" strokeDasharray={c} strokeDashoffset={c * (1 - left / total)} />
+      </svg>
+      <span>{left > 0 ? left : "0"}</span>
+    </div>
+  );
+}
+
+/* ---------- Press and hold to reveal (pass-and-play secrets) ---------- */
+
+export function HoldReveal({ label, secret, onSeen }: { label: string; secret: string; onSeen: () => void }) {
+  const [shown, setShown] = useState(false);
+  const show = () => {
+    setShown(true);
+    onSeen();
+  };
+  const hide = () => setShown(false);
+  return (
+    <button
+      type="button"
+      className={`hold${shown ? " on" : ""}`}
+      onPointerDown={(e) => {
+        e.currentTarget.setPointerCapture?.(e.pointerId);
+        show();
+      }}
+      onPointerUp={hide}
+      onPointerCancel={hide}
+      onLostPointerCapture={hide}
+      onKeyDown={(e) => {
+        if (e.key === " " || e.key === "Enter") {
+          e.preventDefault();
+          show();
+        }
+      }}
+      onKeyUp={hide}
+      onBlur={hide}
+      onContextMenu={(e) => e.preventDefault()}
+      aria-label={shown ? secret : `${label}: press and hold to see`}
+    >
+      <span className="label">{label}</span>
+      <span className="big" aria-hidden={!shown}>
+        {shown ? secret : "Press and hold"}
+      </span>
+      <span className="small muted">{shown ? "Let go to hide" : "Only you should see this"}</span>
+    </button>
+  );
+}
+
+/* ---------- In-game toolbar: sound, full screen, end game ---------- */
+
+export function GameTools({
+  sound,
+  setSound,
+  onEnd,
+}: {
+  sound?: boolean;
+  setSound?: (v: boolean) => void;
+  onEnd: () => void;
+}) {
+  const [confirm, setConfirm] = useState(false);
+  const fs = useSyncExternalStore(
+    () => () => {},
+    () => canFullscreen(),
+    () => false,
+  );
+  if (confirm) {
+    return (
+      <div className="tools confirm" role="alertdialog" aria-label="End this game?">
+        <span>End this game? Scores will be cleared.</span>
+        <button type="button" className="chipbtn" onClick={() => setConfirm(false)}>
+          Keep playing
+        </button>
+        <button type="button" className="chipbtn danger" onClick={onEnd}>
+          End game
+        </button>
+      </div>
+    );
+  }
+  return (
+    <div className="tools">
+      {setSound && (
+        <button type="button" className="chipbtn" aria-pressed={sound} onClick={() => setSound(!sound)}>
+          {sound ? "Sound on" : "Sound off"}
+        </button>
+      )}
+      {fs && (
+        <button type="button" className="chipbtn" onClick={toggleFullscreen}>
+          Full screen
+        </button>
+      )}
+      <button type="button" className="chipbtn" onClick={() => setConfirm(true)}>
+        End game
+      </button>
+    </div>
+  );
+}
+
+/** Used by Home to show "Resume" cards; reads storage after hydration only. */
+export function useSavedGame(key: string): string | null {
+  return useSyncExternalStore(
+    () => () => {},
+    () => {
+      try {
+        return window.localStorage.getItem(`timepass:${key}`);
+      } catch {
+        return null;
+      }
+    },
+    () => null,
   );
 }

@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { LANGS, poolFor, type Lang, type Movie } from "@/content/movies";
+import { useEffect, useRef, useState } from "react";
+import { LANGS, MOVIES, poolFor, type Lang, type Movie } from "@/content/movies";
 import { shuffle } from "@/lib/game";
 import { track } from "@/lib/analytics";
-import { Board, NameList, Seg, speak, stopSpeaking } from "./ui";
+import { usePersistentState } from "@/lib/store";
+import { beep, buzz, unlockAudio, useWakeLock } from "@/lib/device";
+import { Board, Countdown, GameTools, HowToPlay, NameList, Seg, speak, stopSpeaking } from "./ui";
 
 // PRD section 7: storyline -> hero -> heroine -> director -> reveal.
 const CLUES: { key: keyof Movie; label: string; pts: number }[] = [
@@ -19,113 +21,193 @@ const UNDO_MS = 5000;
 type Pool = "te" | "ta" | "both";
 type Setup = { pool: Pool; rounds: 5 | 10; teams: string[] };
 type RoundResult = { movieId: string; winner: string | null; points: number };
+type Award = { winner: string | null; points: number };
+
+/** Everything needed to resume after a refresh. Saved on this phone. */
+type MGState = {
+  setup: Setup;
+  phase: "setup" | "playing" | "final";
+  deckIds: string[];
+  results: RoundResult[];
+  clue: number; // index into CLUES for the current round
+  award: Award | null; // set once the current round is decided
+  sound: boolean;
+};
+
+export const MG_KEY = "game:movie-guess";
+
+const INITIAL: MGState = {
+  setup: { pool: "te", rounds: 5, teams: ["Team A", "Team B"] },
+  phase: "setup",
+  deckIds: [],
+  results: [],
+  clue: 0,
+  award: null,
+  sound: true,
+};
+
+const byId = (id: string) => MOVIES.find((m) => m.id === id);
+const poolLabel = (p: Pool) => (p === "both" ? "Telugu + Tamil" : LANGS.find((l) => l.code === p)!.name);
 
 export default function MovieGuess() {
-  const [setup, setSetup] = useState<Setup>({ pool: "te", rounds: 5, teams: ["Team A", "Team B"] });
-  const [game, setGame] = useState<{ deck: Movie[]; results: RoundResult[] } | null>(null);
+  const [s, setS] = usePersistentState<MGState>(MG_KEY, INITIAL);
+  const deck = s.deckIds.map(byId).filter((m): m is Movie => !!m);
+  useWakeLock(s.phase === "playing");
 
-  function start(s: Setup) {
-    const langs: Lang[] = s.pool === "both" ? ["te", "ta"] : [s.pool];
-    const deck = shuffle(poolFor(langs)).slice(0, s.rounds);
-    setGame({ deck, results: [] });
-    track("game_started", { game: "movie_guess", mode: "same_room", language_pool: s.pool, teams: s.teams.length, rounds: deck.length });
+  function start(setup: Setup) {
+    unlockAudio();
+    const langs: Lang[] = setup.pool === "both" ? ["te", "ta"] : [setup.pool];
+    const deckIds = shuffle(poolFor(langs)).slice(0, setup.rounds).map((m) => m.id);
+    setS({ ...s, setup, phase: "playing", deckIds, results: [], clue: 0, award: null });
+    track("game_started", { game: "movie_guess", mode: "same_room", language_pool: setup.pool, teams: setup.teams.length, rounds: deckIds.length });
   }
 
-  if (!game) return <SetupScreen setup={setup} setSetup={setSetup} onStart={start} />;
-
-  const scores = setup.teams.map((name) => ({
+  const scores = s.setup.teams.map((name) => ({
     name,
-    score: game.results.filter((r) => r.winner === name).reduce((a, r) => a + r.points, 0),
+    score: s.results.filter((r) => r.winner === name).reduce((a, r) => a + r.points, 0),
   }));
 
-  if (game.results.length >= game.deck.length) {
+  if (s.phase === "setup" || deck.length === 0) {
+    return <SetupScreen setup={s.setup} setSetup={(setup) => setS({ ...s, setup })} onStart={start} />;
+  }
+
+  if (s.phase === "final") {
     return (
       <Final
         scores={scores}
         onAgain={() => {
           track("play_again", { next_game: "movie_guess" });
-          start(setup);
+          start(s.setup);
         }}
-        onSetup={() => setGame(null)}
+        onSetup={() => setS({ ...s, phase: "setup" })}
       />
     );
   }
 
-  const idx = game.results.length;
+  const idx = s.results.length;
+  const movie = deck[idx];
   return (
     <Round
-      key={game.deck[idx].id}
-      movie={game.deck[idx]}
+      key={movie.id}
+      movie={movie}
       number={idx + 1}
-      total={game.deck.length}
-      teams={setup.teams}
+      total={deck.length}
+      teams={s.setup.teams}
       scores={scores}
-      onDone={(r) => setGame({ ...game, results: [...game.results, r] })}
+      clue={s.clue}
+      award={s.award}
+      sound={s.sound}
+      setSound={(sound) => setS({ ...s, sound })}
+      onNextClue={() => {
+        track("clue_played", { game: "movie_guess", clue_index: s.clue + 2 });
+        setS({ ...s, clue: s.clue + 1 });
+      }}
+      onAward={(award) => {
+        track("answer_submitted", { game: "movie_guess", correct: !!award.winner, clue_index: s.clue + 1, input_script: "spoken" });
+        setS({ ...s, award });
+      }}
+      onUndo={() => setS({ ...s, award: null })}
+      onNext={() => {
+        const results = [...s.results, { movieId: movie.id, winner: s.award?.winner ?? null, points: s.award?.points ?? 0 }];
+        const done = results.length >= deck.length;
+        if (done) track("game_completed", { game: "movie_guess", rounds: results.length });
+        setS({ ...s, results, clue: 0, award: null, phase: done ? "final" : "playing" });
+      }}
+      onEnd={() => setS({ ...s, phase: "setup", deckIds: [], results: [], clue: 0, award: null })}
     />
   );
 }
 
-/* ---------- Setup (PRD MG-1) ---------- */
+/* ---------- Setup: one big Start, settings below (PRD MG-1) ---------- */
 
 function SetupScreen({ setup, setSetup, onStart }: { setup: Setup; setSetup: (s: Setup) => void; onStart: (s: Setup) => void }) {
   const poolSize = poolFor(setup.pool === "both" ? ["te", "ta"] : [setup.pool]).length;
+  const rounds = Math.min(setup.rounds, poolSize) as 5 | 10;
   return (
-    <div className="rise">
+    <div className="rise setup">
       <div className="screen-head">
-        <span className="meta">G-01 / Setup</span>
-        <h2 className="title">Movie Guess</h2>
-        <p className="muted">Hold this phone, read the clues out (or tap Read aloud), and award points to whoever shouts the answer first.</p>
+        <span className="meta">Movie Guess</span>
+        <h2 className="title">Guess the film from the clues.</h2>
+        <p className="muted">One phone runs the game. Read each clue out, and tap the team that shouts the right answer first.</p>
       </div>
+
+      <HowToPlay
+        id="movie-guess"
+        title="How to play"
+        steps={[
+          "The host reads the story clue out loud (or taps Read aloud).",
+          "Nobody got it? Tap Next clue for the hero, then heroine, then director.",
+          "Tap the team that guessed right. Earlier clues score more: 4, 3, 2, 1.",
+        ]}
+      />
+
       <div className="panel stack">
-        <span className="label">Mode</span>
-        <Seg
-          label="Mode"
-          value="room"
-          onChange={() => {}}
-          options={[
-            { value: "room", label: "Same room" },
-            { value: "online", label: "Online · soon", disabled: true },
-          ]}
-        />
-      </div>
-      <div className="panel stack">
-        <span className="label">Movies from</span>
-        <Seg<Pool>
-          label="Movie pool"
-          value={setup.pool}
-          onChange={(pool) => setSetup({ ...setup, pool })}
-          options={[
-            ...LANGS.map((l) => ({ value: l.code as Pool, label: `${l.native} ${l.name}` })),
-            { value: "both", label: "Both" },
-          ]}
-        />
-      </div>
-      <div className="panel stack">
-        <span className="label">Rounds</span>
-        <Seg<5 | 10>
-          label="Rounds"
-          value={setup.rounds}
-          onChange={(rounds) => setSetup({ ...setup, rounds })}
-          options={[
-            { value: 5, label: "5 rounds" },
-            { value: 10, label: "10 rounds", disabled: poolSize < 10 },
-          ]}
-        />
-      </div>
-      <div className="panel stack">
-        <div className="sec-head" style={{ margin: 0 }}>
-          <span className="label">Teams</span>
-          <span className="label">{setup.teams.length} / 6</span>
-        </div>
-        <NameList names={setup.teams} setNames={(teams) => setSetup({ ...setup, teams })} min={2} max={6} noun="a team" />
-      </div>
-      <div className="panel">
-        <button className="btn block" onClick={() => onStart(setup)}>
+        <button className="btn block xl" onClick={() => onStart({ ...setup, rounds })}>
           Start game
         </button>
+        <p className="summary">
+          {setup.teams.length} teams · {rounds} rounds · {poolLabel(setup.pool)} films
+        </p>
       </div>
+
+      <details className="settings" open={false}>
+        <summary>Change teams and settings</summary>
+        <div className="stack" style={{ gap: 20, paddingTop: 16 }}>
+          <div className="stack">
+            <span className="label">Teams · tap a name to rename</span>
+            <NameList names={setup.teams} setNames={(teams) => setSetup({ ...setup, teams })} min={2} max={6} noun="a team" />
+          </div>
+          <div className="stack">
+            <span className="label">Films from</span>
+            <Seg<Pool>
+              label="Movie pool"
+              value={setup.pool}
+              onChange={(pool) => setSetup({ ...setup, pool })}
+              options={[...LANGS.map((l) => ({ value: l.code as Pool, label: l.name })), { value: "both", label: "Both" }]}
+            />
+          </div>
+          <div className="stack">
+            <span className="label">Rounds</span>
+            <Seg<5 | 10>
+              label="Rounds"
+              value={rounds}
+              onChange={(r) => setSetup({ ...setup, rounds: r })}
+              options={[
+                { value: 5, label: "5 · about 8 min" },
+                { value: 10, label: "10 · about 15 min", disabled: poolSize < 10 },
+              ]}
+            />
+          </div>
+          <div className="stack">
+            <span className="label">Mode</span>
+            <Seg label="Mode" value="room" onChange={() => {}} options={[{ value: "room", label: "Same room" }, { value: "online", label: "Online · coming soon", disabled: true }]} />
+          </div>
+        </div>
+      </details>
     </div>
   );
+}
+
+/* ---------- Clue timer: owns its countdown, restarts per clue ---------- */
+
+function ClueTimer({ sound, paused }: { sound: boolean; paused: boolean }) {
+  const [left, setLeft] = useState(CLUE_SECONDS);
+  useEffect(() => {
+    if (paused || left <= 0) return;
+    const t = setTimeout(() => setLeft(left - 1), 1000);
+    return () => clearTimeout(t);
+  }, [left, paused]);
+  // Cues fire on the transition into each second, not on every render.
+  const last = useRef(left);
+  useEffect(() => {
+    if (last.current === left) return;
+    last.current = left;
+    if (left === 0) {
+      if (sound) beep("end");
+      buzz([80, 60, 80]);
+    } else if (left <= 3 && sound) beep("tick");
+  }, [left, sound]);
+  return <Countdown left={left} total={CLUE_SECONDS} />;
 }
 
 /* ---------- One round ---------- */
@@ -136,149 +218,150 @@ function Round({
   total,
   teams,
   scores,
-  onDone,
+  clue,
+  award,
+  sound,
+  setSound,
+  onNextClue,
+  onAward,
+  onUndo,
+  onNext,
+  onEnd,
 }: {
   movie: Movie;
   number: number;
   total: number;
   teams: string[];
   scores: { name: string; score: number }[];
-  onDone: (r: RoundResult) => void;
+  clue: number;
+  award: Award | null;
+  sound: boolean;
+  setSound: (v: boolean) => void;
+  onNextClue: () => void;
+  onAward: (a: Award) => void;
+  onUndo: () => void;
+  onNext: () => void;
+  onEnd: () => void;
 }) {
-  const [clue, setClue] = useState(0); // index into CLUES
-  const [left, setLeft] = useState(CLUE_SECONDS);
-  const [result, setResult] = useState<{ winner: string | null; points: number } | null>(null);
   const [undoable, setUndoable] = useState(false);
-
-  const revealed = result !== null;
   const lang = LANGS.find((l) => l.code === movie.lang)!;
+  const revealed = award !== null;
 
-  // Clue timer; host can still skip early or wait past zero.
-  useEffect(() => {
-    if (revealed) return;
-    const t = setInterval(() => setLeft((s) => Math.max(0, s - 1)), 1000);
-    return () => clearInterval(t);
-  }, [revealed, clue]);
-
-  // Undo is offered for 5 seconds after awarding (PRD MG-4).
   useEffect(() => {
     if (!undoable) return;
     const t = setTimeout(() => setUndoable(false), UNDO_MS);
     return () => clearTimeout(t);
   }, [undoable]);
-
   useEffect(() => () => stopSpeaking(), []);
 
-  function nextClue() {
-    track("clue_played", { game: "movie_guess", clue_index: clue + 2 });
-    setClue((c) => c + 1);
-    setLeft(CLUE_SECONDS);
-  }
-
-  function award(winner: string | null) {
-    const points = winner ? CLUES[clue].pts : 0;
+  function give(winner: string | null) {
     stopSpeaking();
-    setResult({ winner, points });
+    onAward({ winner, points: winner ? CLUES[clue].pts : 0 });
     setUndoable(true);
-    track("answer_submitted", { game: "movie_guess", correct: !!winner, clue_index: clue + 1, input_script: "spoken" });
+    if (winner) {
+      if (sound) beep("win");
+      buzz(40);
+    }
   }
 
-  function readAloud() {
-    speak(`${CLUES[clue].label}. ${movie[CLUES[clue].key]}`);
-  }
-
-  const canUndo = result !== null && undoable;
-  const preview = result?.winner
-    ? scores.map((s) => (s.name === result.winner ? { ...s, score: s.score + result.points } : s))
-    : scores;
+  const preview = award?.winner ? scores.map((x) => (x.name === award.winner ? { ...x, score: x.score + award.points } : x)) : scores;
 
   return (
-    <div className="rise">
-      <div className="screen-head">
-        <div className="sec-head" style={{ margin: 0 }}>
-          <span className="meta">Round {String(number).padStart(2, "0")} / {String(total).padStart(2, "0")}</span>
-          <span className="meta">{lang.native} {lang.name}</span>
-        </div>
+    <div className="rise round">
+      <div className="round-top">
+        <span className="meta">
+          Round {number} of {total} · {lang.name}
+        </span>
+        <GameTools sound={sound} setSound={setSound} onEnd={onEnd} />
       </div>
 
       {!revealed ? (
-        <>
-          <div className="timer" aria-hidden>
-            <i style={{ transform: `scaleX(${left / CLUE_SECONDS})` }} />
+        <div className="round-grid">
+          <div className="round-main">
+            <ol className="ladder">
+              {CLUES.map((c, i) => (
+                <li key={c.key} className={i === clue ? "on" : i > clue ? "locked" : undefined}>
+                  <span className="label">
+                    {c.label} · {c.pts} {c.pts === 1 ? "pt" : "pts"}
+                  </span>
+                  <div className="clue">{i <= clue ? String(movie[c.key]) : "Hidden"}</div>
+                </li>
+              ))}
+            </ol>
           </div>
-          <div className="sec-head" style={{ marginBottom: 16 }}>
-            <span className="label">Clue {clue + 1} of 4 · worth {CLUES[clue].pts}</span>
-            <span className="label" style={{ color: left <= 5 ? "var(--danger)" : undefined }}>
-              {left > 0 ? `${left}s` : "Time’s up"}
-            </span>
-          </div>
-          <ol className="ladder">
-            {CLUES.map((c, i) => (
-              <li key={c.key} className={i === clue ? "on" : i > clue ? "locked" : undefined}>
-                <span className="label">
-                  {c.label} · <span className="pts">{c.pts} pts</span>
-                </span>
-                <div className="clue">{i <= clue ? String(movie[c.key]) : "—"}</div>
-              </li>
-            ))}
-          </ol>
-
-          <div className="panel stack">
+          <div className="round-side">
+            <div className="timer-row">
+              <ClueTimer key={clue} sound={sound} paused={false} />
+              <div>
+                <span className="label">Clue {clue + 1} of 4</span>
+                <p className="worth">Worth {CLUES[clue].pts}</p>
+              </div>
+            </div>
             <span className="label">Who got it?</span>
             <div className="award">
               {teams.map((t) => (
-                <button key={t} className="btn" onClick={() => award(t)}>
+                <button key={t} className="btn" onClick={() => give(t)}>
                   {t}
                   <small>+{CLUES[clue].pts}</small>
                 </button>
               ))}
             </div>
             <div className="row">
-              <button className="btn ghost" onClick={readAloud}>
+              <button className="btn ghost" onClick={() => speak(`${CLUES[clue].label}. ${movie[CLUES[clue].key]}`)}>
                 Read aloud
               </button>
               {clue < CLUES.length - 1 ? (
-                <button className="btn ghost" onClick={nextClue}>
+                <button className="btn ghost" onClick={onNextClue}>
                   Next clue
                 </button>
               ) : (
-                <button className="btn ghost" onClick={() => award(null)}>
+                <button className="btn ghost" onClick={() => give(null)}>
                   Reveal
                 </button>
               )}
             </div>
-            <p className="small muted">Read aloud uses your phone&apos;s voice for now. Recorded Telugu and Tamil narration comes later.</p>
           </div>
-        </>
+        </div>
       ) : (
-        <>
-          <div className="panel">
-            <span className="label">{result.winner ? `${result.winner} · +${result.points}` : "Nobody got it"}</span>
+        <div className="round-grid">
+          <div className="round-main panel">
+            <span className="label">{award.winner ? `${award.winner} got it · +${award.points}` : "Nobody got it"}</span>
             <div className="reveal-title">{movie.title}</div>
             <div className="facts">
-              <span><b>{movie.year}</b> · {movie.genre}</span>
-              <span>Hero <b>{movie.hero}</b></span>
-              <span>Heroine <b>{movie.heroine}</b></span>
-              <span>Director <b>{movie.director}</b></span>
+              <span>
+                <b>{movie.year}</b> · {movie.genre}
+              </span>
+              <span>
+                Hero <b>{movie.hero}</b>
+              </span>
+              <span>
+                Heroine <b>{movie.heroine}</b>
+              </span>
+              <span>
+                Director <b>{movie.director}</b>
+              </span>
             </div>
           </div>
-          <div className="panel stack">
-            <Board rows={preview} />
+          <div className="round-side stack">
+            <Board rows={preview} big />
             <div className="row">
-              {canUndo && (
-                <button className="btn ghost" onClick={() => {
-                    setResult(null);
+              {undoable && (
+                <button
+                  className="btn ghost"
+                  onClick={() => {
+                    onUndo();
                     setUndoable(false);
-                  }}>
+                  }}
+                >
                   Undo
                 </button>
               )}
-              <button className="btn" onClick={() => onDone({ movieId: movie.id, winner: result.winner, points: result.points })}>
-                {number < total ? "Next round" : "Final scores"}
+              <button className="btn" onClick={onNext}>
+                {number < total ? "Next round" : "See final scores"}
               </button>
             </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   );
@@ -287,29 +370,25 @@ function Round({
 /* ---------- Final ---------- */
 
 function Final({ scores, onAgain, onSetup }: { scores: { name: string; score: number }[]; onAgain: () => void; onSetup: () => void }) {
-  const top = Math.max(...scores.map((s) => s.score));
-  const winners = scores.filter((s) => s.score === top).map((s) => s.name);
-  const headline = useMemo(
-    () => (top === 0 ? "Nobody scored. Tough crowd." : winners.length > 1 ? `${winners.join(" & ")} tie.` : `${winners[0]} wins.`),
-    [top, winners],
-  );
-  useEffect(() => {
-    track("game_completed", { game: "movie_guess" });
-  }, []);
+  const top = Math.max(...scores.map((x) => x.score));
+  const winners = scores.filter((x) => x.score === top).map((x) => x.name);
+  const headline = top === 0 ? "Nobody scored. Tough crowd." : winners.length > 1 ? `${winners.join(" and ")} tie!` : `${winners[0]} wins!`;
   return (
     <div className="rise">
       <div className="screen-head">
-        <span className="meta">G-01 / Final</span>
+        <span className="meta">Movie Guess · Final scores</span>
         <div className="pass">
           {headline}
-          <span className="g" style={{ display: "block" }}>Another round?</span>
+          <span className="g" style={{ display: "block" }}>
+            Another round?
+          </span>
         </div>
       </div>
       <div className="panel stack">
-        <Board rows={scores} />
+        <Board rows={scores} big />
         <div className="row">
           <button className="btn ghost" onClick={onSetup}>
-            Change setup
+            Change teams
           </button>
           <button className="btn" onClick={onAgain}>
             Play again
