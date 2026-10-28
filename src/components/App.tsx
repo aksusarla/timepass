@@ -19,7 +19,7 @@ export default function App() {
       <main className="wrap">
         {route === "movie-guess" ? <MovieGuess /> : route === "imposter" ? <Imposter /> : <Home />}
         <footer>
-          <span>Timepass · prototype v0.3</span>
+          <span>Timepass Beta · v0.3</span>
           <span>No clips, stills or songs. Our words, our voice.</span>
         </footer>
       </main>

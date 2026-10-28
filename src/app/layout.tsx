@@ -4,11 +4,11 @@ import "./tokens.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Timepass Movie Games",
+  title: "Timepass Beta",
   description:
     "Original movie games for Indian get-togethers, in Telugu and Tamil. No install, no login. Open the link and play.",
   openGraph: {
-    title: "Timepass Movie Games",
+    title: "Timepass Beta",
     description: "Original movie games for Indian get-togethers. No install, no login.",
     type: "website",
   },

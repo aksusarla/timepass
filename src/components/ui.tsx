@@ -26,9 +26,10 @@ export const href = (r: Route) => (r === "home" ? "#" : `#${r}`);
 /* ---------- Top bar + theme switch (mirrors the portfolio) ---------- */
 
 export function Bar({ route }: { route: Route | null }) {
-  const links: [Route, string][] = [
-    ["movie-guess", "Movie Guess"],
-    ["imposter", "Imposter"],
+  // "Movie " hides on small phones so the menu fits beside the Beta tag.
+  const links: [Route, string, string][] = [
+    ["movie-guess", "Movie ", "Guess"],
+    ["imposter", "", "Imposter"],
   ];
   return (
     <header className="bar">
@@ -36,9 +37,11 @@ export function Bar({ route }: { route: Route | null }) {
         <a className="wordmark" href={href("home")}>
           timepass<span>.</span>
         </a>
+        <span className="beta" title="Beta: still being tested. Expect changes.">Beta</span>
         <nav aria-label="Games">
-          {links.map(([r, label]) => (
+          {links.map(([r, pre, label]) => (
             <a key={r} href={href(r)} className={route === r ? "on" : undefined}>
+              {pre && <span className="full">{pre}</span>}
               {label}
             </a>
           ))}

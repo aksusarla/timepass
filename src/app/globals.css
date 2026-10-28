@@ -22,6 +22,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .bar .in { max-width: 760px; margin: 0 auto; padding-left: max(clamp(16px, 4vw, 40px), env(safe-area-inset-left, 0px)); padding-right: max(clamp(16px, 4vw, 40px), env(safe-area-inset-right, 0px)); display: flex; align-items: center; gap: 18px; height: 52px; font-size: var(--step-0); }
 .wordmark { font-weight: 900; letter-spacing: -0.05em; font-size: 1.05rem; text-decoration: none; flex: none; }
 .wordmark span { color: var(--ghost); }
+.beta { flex: none; margin-left: -10px; font-size: 0.625rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; border: 1px solid var(--line-strong); border-radius: 999px; padding: 1px 7px; line-height: 1.5; }
 .bar nav { display: flex; gap: 18px; overflow-x: auto; white-space: nowrap; scrollbar-width: none; min-width: 0; flex: 1; }
 .bar nav a { text-decoration: none; color: var(--faint); font-weight: 500; transition: color 0.25s; }
 .bar nav a:hover, .bar nav a.on { color: var(--fg); }
@@ -29,7 +30,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .theme { flex: none; width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--line); background: transparent; color: var(--fg); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: border-color 0.2s, transform 0.5s var(--ease); }
 .theme:hover { border-color: var(--fg); transform: rotate(30deg); }
 .theme svg { width: 16px; height: 16px; }
-@media (max-width: 520px) { .bar nav a .full { display: none; } }
+
 
 /* Type */
 .meta, .label, .sec-no { font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); font-weight: 600; }
@@ -236,4 +237,11 @@ footer { border-top: 1px solid var(--line); margin-top: 48px; padding-top: 16px;
 @media (hover: hover) {
   .wi:hover { font-style: italic; }
   .wordmark:hover, .bar nav a:hover, .link:hover, .gcard:hover h3, .chipbtn:hover, .players li .name:hover, .sugg button:hover, footer span:hover { font-style: italic; }
+}
+
+@media (max-width: 400px) {
+  .bar .in { gap: 12px; }
+  .bar nav { gap: 12px; }
+  .beta { margin-left: -6px; padding: 1px 6px; }
+  .bar nav a .full { display: none; }
 }
