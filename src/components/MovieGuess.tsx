@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { LANGS, MOVIES, poolFor, type Lang, type Movie } from "@/content/movies";
 import { shuffle } from "@/lib/game";
 import { track } from "@/lib/analytics";
@@ -16,10 +16,13 @@ const CLUES: { key: keyof Movie; label: string; pts: number }[] = [
   { key: "director", label: "Director", pts: 1 },
 ];
 const CLUE_SECONDS = 20;
+const GRACE_SECONDS = 3;
 const UNDO_MS = 5000;
 
 type Pool = "te" | "ta" | "both";
-type Setup = { pool: Pool; rounds: 5 | 10; teams: string[] };
+// autoNext: when a clue's timer runs out, open the next clue (or reveal) by
+// itself after a 3-second warning the host can stop. Missing in older saves = on.
+type Setup = { pool: Pool; rounds: 5 | 10; teams: string[]; autoNext?: boolean };
 type RoundResult = { movieId: string; winner: string | null; points: number };
 type Award = { winner: string | null; points: number };
 
@@ -37,7 +40,7 @@ type MGState = {
 export const MG_KEY = "game:movie-guess";
 
 const INITIAL: MGState = {
-  setup: { pool: "te", rounds: 5, teams: ["Team A", "Team B"] },
+  setup: { pool: "te", rounds: 5, teams: ["Team A", "Team B"], autoNext: true },
   phase: "setup",
   deckIds: [],
   results: [],
@@ -98,6 +101,7 @@ export default function MovieGuess() {
       award={s.award}
       sound={s.sound}
       setSound={(sound) => setS({ ...s, sound })}
+      autoNext={s.setup.autoNext !== false}
       onNextClue={() => {
         track("clue_played", { game: "movie_guess", clue_index: s.clue + 2 });
         setS({ ...s, clue: s.clue + 1 });
@@ -181,6 +185,18 @@ function SetupScreen({ setup, setSetup, onStart }: { setup: Setup; setSetup: (s:
             />
           </div>
           <div className="stack">
+            <span className="label">When time runs out</span>
+            <Seg<"auto" | "host">
+              label="When time runs out"
+              value={setup.autoNext === false ? "host" : "auto"}
+              onChange={(v) => setSetup({ ...setup, autoNext: v === "auto" })}
+              options={[
+                { value: "auto", label: "Next clue by itself" },
+                { value: "host", label: "Host decides" },
+              ]}
+            />
+          </div>
+          <div className="stack">
             <span className="label">Mode</span>
             <Seg label="Mode" value="room" onChange={() => {}} options={[{ value: "room", label: "Same room" }, { value: "online", label: "Online · coming soon", disabled: true }]} />
           </div>
@@ -192,7 +208,7 @@ function SetupScreen({ setup, setSetup, onStart }: { setup: Setup; setSetup: (s:
 
 /* ---------- Clue timer: owns its countdown, restarts per clue ---------- */
 
-function ClueTimer({ sound, paused }: { sound: boolean; paused: boolean }) {
+function ClueTimer({ sound, paused, onZero }: { sound: boolean; paused: boolean; onZero: () => void }) {
   const [left, setLeft] = useState(CLUE_SECONDS);
   useEffect(() => {
     if (paused || left <= 0) return;
@@ -207,9 +223,60 @@ function ClueTimer({ sound, paused }: { sound: boolean; paused: boolean }) {
     if (left === 0) {
       if (sound) beep("end");
       buzz([80, 60, 80]);
+      onZero();
     } else if (left <= 3 && sound) beep("tick");
-  }, [left, sound]);
+  }, [left, sound, onZero]);
   return <Countdown left={left} total={CLUE_SECONDS} />;
+}
+
+/* ---------- Clock + auto-advance for one clue (remounts per clue) ---------- */
+
+function ClueClock({
+  clue,
+  sound,
+  auto,
+  onAdvance,
+}: {
+  clue: number;
+  sound: boolean;
+  auto: boolean;
+  onAdvance: () => void;
+}) {
+  // null = timer still running; a number = seconds until auto-advance;
+  // "held" = time is up and the host is in charge.
+  const [grace, setGrace] = useState<number | "held" | null>(null);
+  const isLast = clue === CLUES.length - 1;
+
+  useEffect(() => {
+    if (typeof grace !== "number") return;
+    const t = setTimeout(() => {
+      if (grace <= 1) onAdvance();
+      else setGrace(grace - 1);
+    }, 1000);
+    return () => clearTimeout(t);
+  }, [grace, onAdvance]);
+
+  return (
+    <div className="timer-row">
+      <ClueTimer sound={sound} paused={false} onZero={() => setGrace(auto ? GRACE_SECONDS : "held")} />
+      {typeof grace === "number" ? (
+        <div className="grace" role="status" aria-live="polite">
+          <span className="label">Time’s up</span>
+          <p className="worth">
+            {isLast ? "Revealing" : "Next clue"} in {grace}
+          </p>
+          <button type="button" className="chipbtn" onClick={() => setGrace("held")}>
+            Wait
+          </button>
+        </div>
+      ) : (
+        <div>
+          <span className="label">{grace === "held" ? "Time’s up" : `Clue ${clue + 1} of 4`}</span>
+          <p className="worth">{grace === "held" ? (isLast ? "Tap Reveal" : "Tap Next clue") : `Worth ${CLUES[clue].pts}`}</p>
+        </div>
+      )}
+    </div>
+  );
 }
 
 /* ---------- One round ---------- */
@@ -224,6 +291,7 @@ function Round({
   award,
   sound,
   setSound,
+  autoNext,
   onNextClue,
   onAward,
   onUndo,
@@ -239,6 +307,7 @@ function Round({
   award: Award | null;
   sound: boolean;
   setSound: (v: boolean) => void;
+  autoNext: boolean;
   onNextClue: () => void;
   onAward: (a: Award) => void;
   onUndo: () => void;
@@ -266,6 +335,14 @@ function Round({
     }
   }
 
+  // Auto-advance target: next clue, or reveal with no winner after clue 4.
+  const advance = useCallback(() => {
+    if (clue < CLUES.length - 1) onNextClue();
+    else give(null);
+    // give() only reads props that change with clue/award.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clue, onNextClue]);
+
   const preview = award?.winner ? scores.map((x) => (x.name === award.winner ? { ...x, score: x.score + award.points } : x)) : scores;
 
   return (
@@ -292,13 +369,7 @@ function Round({
             </ol>
           </div>
           <div className="round-side">
-            <div className="timer-row">
-              <ClueTimer key={clue} sound={sound} paused={false} />
-              <div>
-                <span className="label">Clue {clue + 1} of 4</span>
-                <p className="worth">Worth {CLUES[clue].pts}</p>
-              </div>
-            </div>
+            <ClueClock key={clue} clue={clue} sound={sound} auto={autoNext} onAdvance={advance} />
             <span className="label">Who got it?</span>
             <div className="award">
               {teams.map((t) => (

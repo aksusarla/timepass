@@ -7,6 +7,8 @@ the Timepass project.
 **Timepass Beta, v0.3 (front end only, same room):**
 - **Movie Guess**: host-led on one phone. 4-clue ladder (story, hero, heroine,
   director), 20-second timer, 4/3/2/1 points, teams, undo, scoreboard.
+  When a timer runs out the next clue opens by itself after a 3-second
+  warning (Wait button; or set "Host decides" in settings).
 - **Imposter Movie**: pass-and-play on one phone. Secret picks, identical
   reveal screens, two clue rounds, vote, steal, PRD scoring.
 - **Rail Gaadi**: listed as proposed.
