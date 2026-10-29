@@ -4,8 +4,10 @@ Original movie games for Indian get-togethers, in Telugu and Tamil. No install,
 no login: open the link and play. Product spec: `claude/timepass-prd-v1.md` in
 the Timepass project.
 
-**Timepass Beta, v0.3 (front end only, same room):**
-- **Movie Guess**: host-led on one phone. 4-clue ladder (story, hero, heroine,
+**Timepass Beta, v0.4 (front end only, same room):**
+- **Movie Guess**: play as **Teams** or **Solo**. Solo: type the film and pick it
+  from the list (no free text, so spelling never costs a guess; alternative
+  spellings match), a wrong guess or Skip opens the next clue. Teams: host-led on one phone. 4-clue ladder (story, hero, heroine,
   director), 20-second timer, 4/3/2/1 points, teams, undo, scoreboard.
   When a timer runs out the next clue opens by itself after a 3-second
   warning (Wait button; or set "Host decides" in settings).

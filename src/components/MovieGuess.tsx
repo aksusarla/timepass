@@ -1,12 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { LANGS, MOVIES, poolFor, type Lang, type Movie } from "@/content/movies";
-import { shuffle } from "@/lib/game";
+import { LANGS, MOVIES, aliasesFor, poolFor, titlesFor, type Lang, type Movie } from "@/content/movies";
+import { isCorrectGuess, shuffle } from "@/lib/game";
 import { track } from "@/lib/analytics";
 import { usePersistentState } from "@/lib/store";
 import { beep, buzz, unlockAudio, useWakeLock } from "@/lib/device";
-import { Board, Countdown, GameTools, HowToPlay, NameList, Seg, Words, speak, stopSpeaking } from "./ui";
+import { Board, Countdown, GameTools, HowToPlay, NameList, Seg, TitleInput, Words, speak, stopSpeaking } from "./ui";
 
 // PRD section 7: storyline -> hero -> heroine -> director -> reveal.
 const CLUES: { key: keyof Movie; label: string; pts: number }[] = [
@@ -22,7 +22,10 @@ const UNDO_MS = 5000;
 type Pool = "te" | "ta" | "both";
 // autoNext: when a clue's timer runs out, open the next clue (or reveal) by
 // itself after a 3-second warning the host can stop. Missing in older saves = on.
-type Setup = { pool: Pool; rounds: 5 | 10; teams: string[]; autoNext?: boolean };
+// mode: "teams" = host-led on one phone; "solo" = one player types answers.
+// Missing in older saves = teams (PRD v0.3 tab, CR-6).
+type Mode = "teams" | "solo";
+type Setup = { pool: Pool; rounds: 5 | 10; teams: string[]; autoNext?: boolean; mode?: Mode };
 type RoundResult = { movieId: string; winner: string | null; points: number };
 type Award = { winner: string | null; points: number };
 
@@ -34,6 +37,7 @@ type MGState = {
   results: RoundResult[];
   clue: number; // index into CLUES for the current round
   award: Award | null; // set once the current round is decided
+  guesses?: string[]; // solo: wrong titles picked this round
   sound: boolean;
 };
 
@@ -49,23 +53,34 @@ const INITIAL: MGState = {
   sound: true,
 };
 
+const SOLO = "You";
+
 const byId = (id: string) => MOVIES.find((m) => m.id === id);
+const langsOf = (p: Pool): Lang[] => (p === "both" ? ["te", "ta"] : [p]);
 const poolLabel = (p: Pool) => (p === "both" ? "Telugu + Tamil" : LANGS.find((l) => l.code === p)!.name);
 
 export default function MovieGuess() {
   const [s, setS] = usePersistentState<MGState>(MG_KEY, INITIAL);
   const deck = s.deckIds.map(byId).filter((m): m is Movie => !!m);
   useWakeLock(s.phase === "playing");
+  const solo = s.setup.mode === "solo";
+  const players = solo ? [SOLO] : s.setup.teams;
 
   function start(setup: Setup) {
     unlockAudio();
-    const langs: Lang[] = setup.pool === "both" ? ["te", "ta"] : [setup.pool];
-    const deckIds = shuffle(poolFor(langs)).slice(0, setup.rounds).map((m) => m.id);
-    setS({ ...s, setup, phase: "playing", deckIds, results: [], clue: 0, award: null });
-    track("game_started", { game: "movie_guess", mode: "same_room", language_pool: setup.pool, teams: setup.teams.length, rounds: deckIds.length });
+    const deckIds = shuffle(poolFor(langsOf(setup.pool))).slice(0, setup.rounds).map((m) => m.id);
+    setS({ ...s, setup, phase: "playing", deckIds, results: [], clue: 0, award: null, guesses: [] });
+    const isSolo = setup.mode === "solo";
+    track("game_started", {
+      game: "movie_guess",
+      mode: isSolo ? "solo" : "same_room",
+      language_pool: setup.pool,
+      teams: isSolo ? 0 : setup.teams.length,
+      rounds: deckIds.length,
+    });
   }
 
-  const scores = s.setup.teams.map((name) => ({
+  const scores = players.map((name) => ({
     name,
     score: s.results.filter((r) => r.winner === name).reduce((a, r) => a + r.points, 0),
   }));
@@ -78,6 +93,8 @@ export default function MovieGuess() {
     return (
       <Final
         scores={scores}
+        solo={solo}
+        maxScore={s.results.length * CLUES[0].pts}
         onAgain={() => {
           track("play_again", { next_game: "movie_guess" });
           start(s.setup);
@@ -95,7 +112,11 @@ export default function MovieGuess() {
       movie={movie}
       number={idx + 1}
       total={deck.length}
-      teams={s.setup.teams}
+      teams={players}
+      solo={solo}
+      titles={titlesFor(langsOf(s.setup.pool))}
+      aliases={aliasesFor(langsOf(s.setup.pool))}
+      guesses={s.guesses ?? []}
       scores={scores}
       clue={s.clue}
       award={s.award}
@@ -107,17 +128,24 @@ export default function MovieGuess() {
         setS({ ...s, clue: s.clue + 1 });
       }}
       onAward={(award) => {
-        track("answer_submitted", { game: "movie_guess", correct: !!award.winner, clue_index: s.clue + 1, input_script: "spoken" });
+        track("answer_submitted", { game: "movie_guess", correct: !!award.winner, clue_index: s.clue + 1, input_script: solo ? "typed" : "spoken" });
         setS({ ...s, award });
+      }}
+      onWrongGuess={(title) => {
+        // One update: log the miss, then open the next clue or reveal (PM-2).
+        track("answer_submitted", { game: "movie_guess", correct: false, clue_index: s.clue + 1, input_script: "typed" });
+        const guesses = [...(s.guesses ?? []), title];
+        if (s.clue < CLUES.length - 1) setS({ ...s, guesses, clue: s.clue + 1 });
+        else setS({ ...s, guesses, award: { winner: null, points: 0 } });
       }}
       onUndo={() => setS({ ...s, award: null })}
       onNext={() => {
         const results = [...s.results, { movieId: movie.id, winner: s.award?.winner ?? null, points: s.award?.points ?? 0 }];
         const done = results.length >= deck.length;
         if (done) track("game_completed", { game: "movie_guess", rounds: results.length });
-        setS({ ...s, results, clue: 0, award: null, phase: done ? "final" : "playing" });
+        setS({ ...s, results, clue: 0, award: null, guesses: [], phase: done ? "final" : "playing" });
       }}
-      onEnd={() => setS({ ...s, phase: "setup", deckIds: [], results: [], clue: 0, award: null })}
+      onEnd={() => setS({ ...s, phase: "setup", deckIds: [], results: [], clue: 0, award: null, guesses: [] })}
     />
   );
 }
@@ -125,8 +153,9 @@ export default function MovieGuess() {
 /* ---------- Setup: one big Start, settings below (PRD MG-1) ---------- */
 
 function SetupScreen({ setup, setSetup, onStart }: { setup: Setup; setSetup: (s: Setup) => void; onStart: (s: Setup) => void }) {
-  const poolSize = poolFor(setup.pool === "both" ? ["te", "ta"] : [setup.pool]).length;
+  const poolSize = poolFor(langsOf(setup.pool)).length;
   const rounds = Math.min(setup.rounds, poolSize) as 5 | 10;
+  const solo = setup.mode === "solo";
   return (
     <div className="rise setup">
       <div className="screen-head">
@@ -134,35 +163,66 @@ function SetupScreen({ setup, setSetup, onStart }: { setup: Setup; setSetup: (s:
         <h2 className="title">
           <Words text="Guess the film from the clues." />
         </h2>
-        <p className="muted">One phone runs the game. Read each clue out, and tap the team that shouts the right answer first.</p>
+        <p className="muted">
+          {solo
+            ? "Just you and your phone. Type the film and pick it from the list. A wrong guess opens the next clue."
+            : "One phone runs the game. Read each clue out, and tap the team that shouts the right answer first."}
+        </p>
       </div>
 
-      <HowToPlay
-        id="movie-guess"
-        title="How to play"
-        steps={[
-          "The host reads the story clue out loud (or taps Read aloud).",
-          "Nobody got it? Tap Next clue for the hero, then heroine, then director.",
-          "Tap the team that guessed right. Earlier clues score more: 4, 3, 2, 1.",
-        ]}
-      />
+      <div className="stack">
+        <span className="label">Play as</span>
+        <Seg<Mode>
+          label="Play as"
+          value={solo ? "solo" : "teams"}
+          onChange={(mode) => setSetup({ ...setup, mode })}
+          options={[
+            { value: "teams", label: "Teams" },
+            { value: "solo", label: "Solo" },
+          ]}
+        />
+      </div>
+
+      {solo ? (
+        <HowToPlay
+          id="movie-guess-solo"
+          title="How to play solo"
+          steps={[
+            "Read the story clue, then type the film's name.",
+            "Pick it from the list, so spelling never costs you.",
+            "Wrong, or tapped Skip? The next clue opens: hero, heroine, then director. Earlier guesses score more: 4, 3, 2, 1.",
+          ]}
+        />
+      ) : (
+        <HowToPlay
+          id="movie-guess"
+          title="How to play"
+          steps={[
+            "The host reads the story clue out loud (or taps Read aloud).",
+            "Nobody got it? Tap Next clue for the hero, then heroine, then director.",
+            "Tap the team that guessed right. Earlier clues score more: 4, 3, 2, 1.",
+          ]}
+        />
+      )}
 
       <div className="panel stack">
         <button className="btn block xl" onClick={() => onStart({ ...setup, rounds })}>
           Start game
         </button>
         <p className="summary">
-          {setup.teams.length} teams · {rounds} rounds · {poolLabel(setup.pool)} films
+          {solo ? "Solo" : `${setup.teams.length} teams`} · {rounds} rounds · {poolLabel(setup.pool)} films
         </p>
       </div>
 
       <details className="settings" open={false}>
-        <summary>Change teams and settings</summary>
+        <summary>{solo ? "Change settings" : "Change teams and settings"}</summary>
         <div className="stack" style={{ gap: 20, paddingTop: 16 }}>
-          <div className="stack">
-            <span className="label">Teams · tap a name to rename</span>
-            <NameList names={setup.teams} setNames={(teams) => setSetup({ ...setup, teams })} min={2} max={6} noun="a team" />
-          </div>
+          {!solo && (
+            <div className="stack">
+              <span className="label">Teams · tap a name to rename</span>
+              <NameList names={setup.teams} setNames={(teams) => setSetup({ ...setup, teams })} min={2} max={6} noun="a team" />
+            </div>
+          )}
           <div className="stack">
             <span className="label">Films from</span>
             <Seg<Pool>
@@ -286,6 +346,10 @@ function Round({
   number,
   total,
   teams,
+  solo,
+  titles,
+  aliases,
+  guesses,
   scores,
   clue,
   award,
@@ -294,6 +358,7 @@ function Round({
   autoNext,
   onNextClue,
   onAward,
+  onWrongGuess,
   onUndo,
   onNext,
   onEnd,
@@ -302,6 +367,10 @@ function Round({
   number: number;
   total: number;
   teams: string[];
+  solo: boolean;
+  titles: string[];
+  aliases: Record<string, string[]>;
+  guesses: string[];
   scores: { name: string; score: number }[];
   clue: number;
   award: Award | null;
@@ -310,6 +379,7 @@ function Round({
   autoNext: boolean;
   onNextClue: () => void;
   onAward: (a: Award) => void;
+  onWrongGuess: (title: string) => void;
   onUndo: () => void;
   onNext: () => void;
   onEnd: () => void;
@@ -328,7 +398,7 @@ function Round({
   function give(winner: string | null) {
     stopSpeaking();
     onAward({ winner, points: winner ? CLUES[clue].pts : 0 });
-    setUndoable(true);
+    setUndoable(!solo); // undo is for a host's mis-tap; a solo guess is final
     if (winner) {
       if (sound) beep("win");
       buzz(40);
@@ -342,6 +412,19 @@ function Round({
     // give() only reads props that change with clue/award.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clue, onNextClue]);
+
+  function guess(title: string) {
+    stopSpeaking();
+    if (isCorrectGuess(title, movie)) give(SOLO);
+    else {
+      if (sound) beep("tick");
+      buzz(60);
+      onWrongGuess(title);
+    }
+  }
+
+  // Titles already tried this round are taken out of the list.
+  const open = titles.filter((t) => !guesses.includes(t));
 
   const preview = award?.winner ? scores.map((x) => (x.name === award.winner ? { ...x, score: x.score + award.points } : x)) : scores;
 
@@ -370,26 +453,40 @@ function Round({
           </div>
           <div className="round-side">
             <ClueClock key={clue} clue={clue} sound={sound} auto={autoNext} onAdvance={advance} />
-            <span className="label">Who got it?</span>
-            <div className="award">
-              {teams.map((t) => (
-                <button key={t} className="btn" onClick={() => give(t)}>
-                  {t}
-                  <small>+{CLUES[clue].pts}</small>
-                </button>
-              ))}
-            </div>
+            {solo ? (
+              <div className="stack">
+                <span className="label">Your guess · pick from the list</span>
+                <TitleInput key={clue} titles={open} aliases={aliases} onPick={guess} placeholder="Type the film's name" />
+                {guesses.length > 0 && (
+                  <p className="muted" role="status" aria-live="polite">
+                    Not {guesses.join(", not ")}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <>
+                <span className="label">Who got it?</span>
+                <div className="award">
+                  {teams.map((t) => (
+                    <button key={t} className="btn" onClick={() => give(t)}>
+                      {t}
+                      <small>+{CLUES[clue].pts}</small>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
             <div className="row">
               <button className="btn ghost" onClick={() => speak(`${CLUES[clue].label}. ${movie[CLUES[clue].key]}`)}>
                 Read aloud
               </button>
               {clue < CLUES.length - 1 ? (
                 <button className="btn ghost" onClick={onNextClue}>
-                  Next clue
+                  {solo ? "Skip" : "Next clue"}
                 </button>
               ) : (
                 <button className="btn ghost" onClick={() => give(null)}>
-                  Reveal
+                  {solo ? "Give up" : "Reveal"}
                 </button>
               )}
             </div>
@@ -398,7 +495,7 @@ function Round({
       ) : (
         <div className="round-grid">
           <div className="round-main panel">
-            <span className="label">{award.winner ? `${award.winner} got it · +${award.points}` : "Nobody got it"}</span>
+            <span className="label">{award.winner ? `${award.winner} got it · +${award.points}` : solo ? "Not this time" : "Nobody got it"}</span>
             <div className="reveal-title">
               <Words text={movie.title} />
             </div>
@@ -444,10 +541,28 @@ function Round({
 
 /* ---------- Final ---------- */
 
-function Final({ scores, onAgain, onSetup }: { scores: { name: string; score: number }[]; onAgain: () => void; onSetup: () => void }) {
+function Final({
+  scores,
+  solo,
+  maxScore,
+  onAgain,
+  onSetup,
+}: {
+  scores: { name: string; score: number }[];
+  solo: boolean;
+  maxScore: number;
+  onAgain: () => void;
+  onSetup: () => void;
+}) {
   const top = Math.max(...scores.map((x) => x.score));
   const winners = scores.filter((x) => x.score === top).map((x) => x.name);
-  const headline = top === 0 ? "Nobody scored. Tough crowd." : winners.length > 1 ? `${winners.join(" and ")} tie!` : `${winners[0]} wins!`;
+  const headline = solo
+    ? `You scored ${top} of ${maxScore}.`
+    : top === 0
+      ? "Nobody scored. Tough crowd."
+      : winners.length > 1
+        ? `${winners.join(" and ")} tie!`
+        : `${winners[0]} wins!`;
   return (
     <div className="rise">
       <div className="screen-head">
@@ -463,7 +578,7 @@ function Final({ scores, onAgain, onSetup }: { scores: { name: string; score: nu
         <Board rows={scores} big />
         <div className="row">
           <button className="btn ghost" onClick={onSetup}>
-            Change teams
+            {solo ? "Change settings" : "Change teams"}
           </button>
           <button className="btn" onClick={onAgain}>
             Play again
