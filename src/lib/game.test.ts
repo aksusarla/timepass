@@ -20,6 +20,13 @@ test("suggest ranks prefix matches first and needs 2 characters", () => {
   assert.deepEqual(suggest("ra", titles), ["Rangasthalam", "Magadheera"]);
 });
 
+test("suggest also matches alternative spellings", () => {
+  const titles = ["Baahubali: The Beginning", "Bommarillu"];
+  const aliases = { "Baahubali: The Beginning": ["bahubali", "baahubali 1"] };
+  assert.deepEqual(suggest("bahu", titles, 5, aliases), ["Baahubali: The Beginning"]);
+  assert.deepEqual(suggest("bahu", titles), []);
+});
+
 test("shuffle keeps every item", () => {
   assert.deepEqual(shuffle([1, 2, 3, 4]).sort(), [1, 2, 3, 4]);
 });

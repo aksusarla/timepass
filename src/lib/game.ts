@@ -19,12 +19,21 @@ export function isCorrectGuess(
   return [answer.title, ...answer.aliases].some((t) => normalizeTitle(t) === g);
 }
 
-/** Up to `limit` titles containing the query, after 2 characters. */
-export function suggest(query: string, titles: string[], limit = 5): string[] {
+/**
+ * Up to `limit` titles matching the query, after 2 characters. A title also
+ * matches through its alternative spellings in `aliases` (title -> spellings).
+ */
+export function suggest(
+  query: string,
+  titles: string[],
+  limit = 5,
+  aliases: Record<string, string[]> = {},
+): string[] {
   const q = normalizeTitle(query);
   if (q.length < 2) return [];
-  const starts = titles.filter((t) => normalizeTitle(t).startsWith(q));
-  const contains = titles.filter((t) => !starts.includes(t) && normalizeTitle(t).includes(q));
+  const keys = (t: string) => [t, ...(aliases[t] ?? [])].map(normalizeTitle);
+  const starts = titles.filter((t) => keys(t).some((k) => k.startsWith(q)));
+  const contains = titles.filter((t) => !starts.includes(t) && keys(t).some((k) => k.includes(q)));
   return [...starts, ...contains].slice(0, limit);
 }
 

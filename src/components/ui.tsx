@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useMemo, useState, useSyncExternalStore } from "react";
-import { suggest } from "@/lib/game";
+import { normalizeTitle, suggest } from "@/lib/game";
 import { loadState, saveState } from "@/lib/store";
 import { canFullscreen, toggleFullscreen } from "@/lib/device";
 
@@ -133,15 +133,18 @@ export function TitleInput({
   placeholder = "Type a movie name",
   allowFreeText = false,
   autoFocus = false,
+  aliases,
 }: {
   titles: string[];
   onPick: (title: string) => void;
   placeholder?: string;
   allowFreeText?: boolean;
   autoFocus?: boolean;
+  /** title -> accepted alternative spellings, matched in suggestions */
+  aliases?: Record<string, string[]>;
 }) {
   const [q, setQ] = useState("");
-  const list = useMemo(() => suggest(q, titles), [q, titles]);
+  const list = useMemo(() => suggest(q, titles, 5, aliases), [q, titles, aliases]);
   function pick(t: string) {
     setQ("");
     onPick(t);
@@ -151,8 +154,16 @@ export function TitleInput({
       className="stack"
       onSubmit={(e) => {
         e.preventDefault();
-        if (list[0]) pick(list[0]);
-        else if (allowFreeText && q.trim().length >= 2) pick(q.trim());
+        if (allowFreeText) {
+          if (list[0]) pick(list[0]);
+          else if (q.trim().length >= 2) pick(q.trim());
+          return;
+        }
+        // Pick-from-list only: Enter submits just when the choice is certain,
+        // so a half-typed word never sends the wrong film.
+        const exact = list.find((t) => normalizeTitle(t) === normalizeTitle(q));
+        if (exact) pick(exact);
+        else if (list.length === 1) pick(list[0]);
       }}
     >
       <input

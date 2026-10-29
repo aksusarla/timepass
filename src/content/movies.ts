@@ -147,6 +147,11 @@ export function poolFor(langs: Lang[]): Movie[] {
   return MOVIES.filter((m) => langs.includes(m.lang));
 }
 
+/** Accepted alternative spellings per title, so autocomplete finds them. */
+export function aliasesFor(langs: Lang[]): Record<string, string[]> {
+  return Object.fromEntries(poolFor(langs).map((m) => [m.title, m.aliases]));
+}
+
 export function titlesFor(langs: Lang[]): string[] {
   const all = [...poolFor(langs).map((m) => m.title), ...langs.flatMap((l) => EXTRA_TITLES[l])];
   return Array.from(new Set(all)).sort((a, b) => a.localeCompare(b));
