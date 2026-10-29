@@ -13,7 +13,9 @@ embarrassing; prefer the simplest thing that works.
 - Hosted on GitHub Pages via `.github/workflows/pages.yml` (BASE_PATH = /repo-name)
 - No backend yet. Online mode needs a real-time room service that holds secrets
   server-side (PRD 6, 8); the static front end will talk to it.
-- Analytics only through `track()` in `src/lib/analytics.ts` (PRD section 11 events)
+- Analytics only through `track()` in `src/lib/analytics.ts`; event names and
+  properties follow the project doc "timepass-analytics-posthog-tracking-plan".
+  Never rename a live event; never send names, nicknames or typed titles.
 
 ## Layout
 - `src/content/movies.ts` - content bank (te, ta) + autocomplete decoys

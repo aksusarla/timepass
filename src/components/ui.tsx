@@ -4,6 +4,7 @@ import { Fragment, useMemo, useState, useSyncExternalStore } from "react";
 import { normalizeTitle, suggest } from "@/lib/game";
 import { loadState, saveState } from "@/lib/store";
 import { canFullscreen, toggleFullscreen } from "@/lib/device";
+import { shareUrl, track } from "@/lib/analytics";
 
 /* ---------- Hash routing: works on GitHub Pages and any static host ---------- */
 
@@ -511,5 +512,87 @@ export function Words({ text }: { text: string }) {
         </Fragment>
       ))}
     </>
+  );
+}
+
+/* ---------- Share result + quick feedback (tracking plan: share_clicked, feedback_given) ---------- */
+
+export function ShareCard({ text, roomId, analytics }: { text: string; roomId?: string; analytics: Record<string, string | number | boolean | null | undefined> }) {
+  const [copied, setCopied] = useState(false);
+  const [rated, setRated] = useState<"up" | "down" | null>(null);
+  const canNativeShare = useSyncExternalStore(
+    () => () => {},
+    () => typeof navigator !== "undefined" && typeof navigator.share === "function",
+    () => false,
+  );
+  const link = () => shareUrl(roomId);
+  const message = () => `${text}\nPlay on Timepass: ${link()}`;
+  const sent = (channel: "whatsapp" | "copy" | "other") =>
+    track("share_clicked", { ...analytics, room_id: roomId, channel, surface: "result_card" });
+
+  async function copy() {
+    sent("copy");
+    try {
+      await navigator.clipboard.writeText(message());
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {}
+  }
+  async function nativeShare() {
+    sent("other");
+    try {
+      await navigator.share({ text: message() });
+    } catch {}
+  }
+
+  return (
+    <div className="share stack">
+      <span className="label">Share the result</span>
+      <div className="row">
+        <a
+          className="btn"
+          href={`https://wa.me/?text=${encodeURIComponent(text)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => {
+            sent("whatsapp");
+            e.currentTarget.href = `https://wa.me/?text=${encodeURIComponent(message())}`;
+          }}
+        >
+          WhatsApp
+        </a>
+        <button type="button" className="btn ghost" onClick={copy}>
+          {copied ? "Copied!" : "Copy link"}
+        </button>
+        {canNativeShare && (
+          <button type="button" className="btn ghost" onClick={nativeShare}>
+            More
+          </button>
+        )}
+      </div>
+      <div className="feedback">
+        {rated ? (
+          <span className="muted small">{rated === "up" ? "Thanks! Glad you enjoyed it." : "Thanks. We'll keep improving it."}</span>
+        ) : (
+          <>
+            <span className="small">Enjoyed this game?</span>
+            {(["up", "down"] as const).map((r) => (
+              <button
+                key={r}
+                type="button"
+                className="chipbtn"
+                aria-label={r === "up" ? "Yes, enjoyed it" : "No, not really"}
+                onClick={() => {
+                  setRated(r);
+                  track("feedback_given", { ...analytics, room_id: roomId, rating: r });
+                }}
+              >
+                {r === "up" ? "👍 Yes" : "👎 Not really"}
+              </button>
+            ))}
+          </>
+        )}
+      </div>
+    </div>
   );
 }

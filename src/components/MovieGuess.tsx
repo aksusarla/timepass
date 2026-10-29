@@ -3,10 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { LANGS, MOVIES, aliasesFor, poolFor, titlesFor, type Lang, type Movie } from "@/content/movies";
 import { isCorrectGuess, shuffle } from "@/lib/game";
-import { track } from "@/lib/analytics";
+import { newRoomId, nowMs, secondsSince, track } from "@/lib/analytics";
 import { usePersistentState } from "@/lib/store";
 import { beep, buzz, unlockAudio, useWakeLock } from "@/lib/device";
-import { Board, Countdown, GameTools, HowToPlay, NameList, Seg, TitleInput, Words, speak, stopSpeaking } from "./ui";
+import { Board, Countdown, GameTools, HowToPlay, NameList, Seg, ShareCard, TitleInput, Words, speak, stopSpeaking } from "./ui";
 
 // PRD section 7: storyline -> hero -> heroine -> director -> reveal.
 const CLUES: { key: keyof Movie; label: string; pts: number }[] = [
@@ -39,6 +39,11 @@ type MGState = {
   award: Award | null; // set once the current round is decided
   guesses?: string[]; // solo: wrong titles picked this round
   sound: boolean;
+  // Analytics (tracking plan v1): one room per hosting session; timestamps
+  // for game and round durations. Missing in older saves.
+  roomId?: string;
+  gameStartedAt?: number;
+  roundStartedAt?: number;
 };
 
 export const MG_KEY = "game:movie-guess";
@@ -66,17 +71,35 @@ export default function MovieGuess() {
   const solo = s.setup.mode === "solo";
   const players = solo ? [SOLO] : s.setup.teams;
 
-  function start(setup: Setup) {
+  // Properties shared by every Movie Guess event.
+  const ctx = (setup: Setup = s.setup, roomId: string | undefined = s.roomId) => ({
+    game: "movie_guess",
+    language: setup.pool,
+    mode: setup.mode === "solo" ? "solo" : "same_room",
+    role: "host",
+    room_id: roomId,
+  });
+  const playerCount = (setup: Setup) => (setup.mode === "solo" ? 1 : setup.teams.length);
+
+  // fresh = started from the setup screen (new room); Play again keeps the room.
+  function start(setup: Setup, fresh = true) {
     unlockAudio();
     const deckIds = shuffle(poolFor(langsOf(setup.pool))).slice(0, setup.rounds).map((m) => m.id);
-    setS({ ...s, setup, phase: "playing", deckIds, results: [], clue: 0, award: null, guesses: [] });
-    const isSolo = setup.mode === "solo";
-    track("game_started", {
-      game: "movie_guess",
-      mode: isSolo ? "solo" : "same_room",
-      language_pool: setup.pool,
-      teams: isSolo ? 0 : setup.teams.length,
-      rounds: deckIds.length,
+    const roomId = fresh || !s.roomId ? newRoomId() : s.roomId;
+    const t = nowMs();
+    setS({ ...s, setup, phase: "playing", deckIds, results: [], clue: 0, award: null, guesses: [], roomId, gameStartedAt: t, roundStartedAt: t });
+    if (fresh) track("room_created", ctx(setup, roomId));
+    track("game_started", { ...ctx(setup, roomId), player_count: playerCount(setup), rounds: deckIds.length });
+  }
+
+  function ended(endedBy: "finished" | "quit", roundsPlayed: number, topScore: number) {
+    track("game_ended", {
+      ...ctx(),
+      rounds_played: roundsPlayed,
+      player_count: playerCount(s.setup),
+      duration_s: secondsSince(s.gameStartedAt),
+      ended_by: endedBy,
+      top_score: topScore,
     });
   }
 
@@ -95,9 +118,11 @@ export default function MovieGuess() {
         scores={scores}
         solo={solo}
         maxScore={s.results.length * CLUES[0].pts}
+        roomId={s.roomId}
+        analytics={ctx()}
         onAgain={() => {
-          track("play_again", { next_game: "movie_guess" });
-          start(s.setup);
+          track("play_again", { ...ctx(), next_game: "movie_guess" });
+          start(s.setup, false);
         }}
         onSetup={() => setS({ ...s, phase: "setup" })}
       />
@@ -124,16 +149,16 @@ export default function MovieGuess() {
       setSound={(sound) => setS({ ...s, sound })}
       autoNext={s.setup.autoNext !== false}
       onNextClue={() => {
-        track("clue_played", { game: "movie_guess", clue_index: s.clue + 2 });
+        track("clue_played", { ...ctx(), clue_index: s.clue + 2 });
         setS({ ...s, clue: s.clue + 1 });
       }}
       onAward={(award) => {
-        track("answer_submitted", { game: "movie_guess", correct: !!award.winner, clue_index: s.clue + 1, input_script: solo ? "typed" : "spoken" });
+        track("answer_submitted", { ...ctx(), correct: !!award.winner, clue_index: s.clue + 1, input_script: solo ? "typed" : "spoken" });
         setS({ ...s, award });
       }}
       onWrongGuess={(title) => {
         // One update: log the miss, then open the next clue or reveal (PM-2).
-        track("answer_submitted", { game: "movie_guess", correct: false, clue_index: s.clue + 1, input_script: "typed" });
+        track("answer_submitted", { ...ctx(), correct: false, clue_index: s.clue + 1, input_script: "typed" });
         const guesses = [...(s.guesses ?? []), title];
         if (s.clue < CLUES.length - 1) setS({ ...s, guesses, clue: s.clue + 1 });
         else setS({ ...s, guesses, award: { winner: null, points: 0 } });
@@ -142,10 +167,24 @@ export default function MovieGuess() {
       onNext={() => {
         const results = [...s.results, { movieId: movie.id, winner: s.award?.winner ?? null, points: s.award?.points ?? 0 }];
         const done = results.length >= deck.length;
-        if (done) track("game_completed", { game: "movie_guess", rounds: results.length });
-        setS({ ...s, results, clue: 0, award: null, guesses: [], phase: done ? "final" : "playing" });
+        track("round_completed", {
+          ...ctx(),
+          round_number: results.length,
+          correct: !!s.award?.winner,
+          points: s.award?.points ?? 0,
+          clue_index: s.clue + 1,
+          time_taken_s: secondsSince(s.roundStartedAt),
+        });
+        if (done) {
+          const totals = players.map((p) => results.filter((r) => r.winner === p).reduce((a, r) => a + r.points, 0));
+          ended("finished", results.length, Math.max(0, ...totals));
+        }
+        setS({ ...s, results, clue: 0, award: null, guesses: [], phase: done ? "final" : "playing", roundStartedAt: nowMs() });
       }}
-      onEnd={() => setS({ ...s, phase: "setup", deckIds: [], results: [], clue: 0, award: null, guesses: [] })}
+      onEnd={() => {
+        ended("quit", s.results.length, Math.max(0, ...scores.map((x) => x.score)));
+        setS({ ...s, phase: "setup", deckIds: [], results: [], clue: 0, award: null, guesses: [] });
+      }}
     />
   );
 }
@@ -545,12 +584,16 @@ function Final({
   scores,
   solo,
   maxScore,
+  roomId,
+  analytics,
   onAgain,
   onSetup,
 }: {
   scores: { name: string; score: number }[];
   solo: boolean;
   maxScore: number;
+  roomId?: string;
+  analytics: Record<string, string | number | boolean | null | undefined>;
   onAgain: () => void;
   onSetup: () => void;
 }) {
@@ -584,6 +627,11 @@ function Final({
             Play again
           </button>
         </div>
+        <ShareCard
+          roomId={roomId}
+          analytics={analytics}
+          text={solo ? `I scored ${top} of ${maxScore} in Movie Guess on Timepass. Can you beat it?` : `${headline} We just played Movie Guess on Timepass.`}
+        />
       </div>
     </div>
   );

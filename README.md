@@ -52,9 +52,13 @@ npm run build          # static site in ./out
    about 2 minutes the site is live at **https://aksusarla.github.io/timepass/**
    (the link also appears on the workflow run).
 
-Optional analytics: repo **Settings > Secrets and variables > Actions >
-Variables**, add `NEXT_PUBLIC_POSTHOG_KEY` and `NEXT_PUBLIC_CLARITY_ID`, then
-re-run the workflow.
+Analytics (PostHog, tracking plan v1): repo **Settings > Secrets and
+variables > Actions > New repository secret**, add `NEXT_PUBLIC_POSTHOG_KEY`
+(the "Timepass - Prod" project key) and optionally `NEXT_PUBLIC_POSTHOG_HOST`
+(defaults to `https://eu.i.posthog.com`), then re-run the deploy. Without a key
+the site runs with analytics off. Locally, put the "Timepass - Dev" key in
+`.env.local` (see `.env.example`). Visit the live site once with `?team=1` on
+each of your devices to tag your own usage as `team_member`.
 
 Free GitHub Pages needs a public repo. To keep the code private, use Vercel
 instead (import the repo at vercel.com; no settings needed).

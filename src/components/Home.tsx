@@ -1,6 +1,8 @@
 "use client";
 
 import { MOVIES, LANGS } from "@/content/movies";
+import { useEffect } from "react";
+import { landingParams, track } from "@/lib/analytics";
 import { Arrow, Words, href, useSavedGame } from "./ui";
 import { MG_KEY } from "./MovieGuess";
 import { IM_KEY } from "./Imposter";
@@ -22,6 +24,11 @@ export default function Home() {
   const mgResume = resumeLabel(MG_KEY, useSavedGame(MG_KEY));
   const imResume = resumeLabel(IM_KEY, useSavedGame(IM_KEY));
 
+  useEffect(() => {
+    const { ref, utm_source } = landingParams();
+    track("landing_viewed", { language: "en", browser_language: navigator.language, ref, utm_source });
+  }, []);
+
   return (
     <>
       <div className="intro rise">
@@ -34,7 +41,7 @@ export default function Home() {
       </div>
 
       <div className="cards">
-        <a className="gcard" href={href("movie-guess")}>
+        <a className="gcard" href={href("movie-guess")} onClick={() => track("game_selected", { game: "movie_guess", resumed: !!mgResume })}>
           <div className="gcard-top">
             <h3>
               <Words text="Movie Guess" />
@@ -52,7 +59,7 @@ export default function Home() {
           </span>
         </a>
 
-        <a className="gcard" href={href("imposter")}>
+        <a className="gcard" href={href("imposter")} onClick={() => track("game_selected", { game: "imposter", resumed: !!imResume })}>
           <div className="gcard-top">
             <h3>
               <Words text="Imposter Movie" />

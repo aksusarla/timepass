@@ -3,10 +3,10 @@
 import { useState } from "react";
 import { LANGS, titlesFor, type Lang } from "@/content/movies";
 import { normalizeTitle, pickImposterRound, shuffle } from "@/lib/game";
-import { track } from "@/lib/analytics";
+import { newRoomId, nowMs, secondsSince, track } from "@/lib/analytics";
 import { usePersistentState } from "@/lib/store";
 import { unlockAudio, useWakeLock } from "@/lib/device";
-import { Board, GameTools, HoldReveal, HowToPlay, NameList, Seg, TitleInput, Words } from "./ui";
+import { Board, GameTools, HoldReveal, HowToPlay, NameList, Seg, ShareCard, TitleInput, Words } from "./ui";
 
 // PRD section 8, played pass-and-play on one phone. The online version will
 // hold the real movie and the imposter on the server instead.
@@ -31,6 +31,11 @@ type IMState = {
   round: RoundState | null;
   roundNo: number;
   note: string;
+  // Analytics (tracking plan v1). Missing in older saves.
+  roomId?: string;
+  roundsDone?: number;
+  gameStartedAt?: number;
+  roundStartedAt?: number;
 };
 
 export const IM_KEY = "game:imposter";
@@ -46,12 +51,46 @@ export default function Imposter() {
   const langs: Lang[] = pool === "both" ? ["te", "ta"] : [pool];
   const titles = titlesFor(langs);
   const name = (i: number) => players[i];
-  const endGame = () => setS({ ...INITIAL, players, pool });
+  // Properties shared by every Imposter event. No player names or movie titles.
+  const ctx = (roomId: string | undefined = s.roomId) => ({ game: "imposter", language: pool, mode: "same_room", role: "host", room_id: roomId });
+
+  // A "game" runs from Start round on the setup screen until End game or Change players.
+  function ended(endedBy: "quit" | "changed_players") {
+    if (!s.roomId) return;
+    track("game_ended", {
+      ...ctx(),
+      rounds_played: s.roundsDone ?? 0,
+      player_count: players.length,
+      duration_s: secondsSince(s.gameStartedAt),
+      ended_by: endedBy,
+      top_score: Math.max(0, ...Object.values(scores)),
+    });
+  }
+  const endGame = () => {
+    ended("quit");
+    setS({ ...INITIAL, players, pool });
+  };
 
   function begin() {
     unlockAudio();
-    set({ note: "", roundNo: roundNo + 1, phase: { kind: "submit", i: 0, open: false, subs: [] }, round: null });
-    track("game_started", { game: "imposter", mode: "same_room", player_count: players.length, language_pool: pool });
+    const fresh = phase.kind === "setup" || !s.roomId;
+    const roomId = fresh ? newRoomId() : s.roomId;
+    const t = nowMs();
+    setS({
+      ...s,
+      note: "",
+      roundNo: roundNo + 1,
+      phase: { kind: "submit", i: 0, open: false, subs: [] },
+      round: null,
+      roomId,
+      roundsDone: fresh ? 0 : (s.roundsDone ?? 0),
+      gameStartedAt: fresh ? t : s.gameStartedAt,
+      roundStartedAt: t,
+    });
+    if (fresh) {
+      track("room_created", ctx(roomId));
+      track("game_started", { ...ctx(roomId), player_count: players.length });
+    }
   }
 
   function submitted(subs: string[]) {
@@ -70,8 +109,17 @@ export default function Imposter() {
     if (caught && !stole) players.forEach((p, i) => i !== round.imposterIdx && (next[p] = (next[p] ?? 0) + 1));
     else if (caught && stole) next[imp] = (next[imp] ?? 0) + 2;
     else next[imp] = (next[imp] ?? 0) + 3;
-    set({ scores: next, phase: { kind: "result", caught, stole, guess } });
-    track("round_completed", { game: "imposter", caught, stole: !!stole });
+    const roundsDone = (s.roundsDone ?? 0) + 1;
+    set({ scores: next, phase: { kind: "result", caught, stole, guess }, roundsDone });
+    track("round_completed", {
+      ...ctx(),
+      round_number: roundsDone,
+      correct: caught, // the room found the imposter
+      caught,
+      stole: !!stole,
+      player_count: players.length,
+      time_taken_s: secondsSince(s.roundStartedAt),
+    });
   }
 
   /* ----- Setup ----- */
@@ -232,7 +280,7 @@ export default function Imposter() {
                 key={p}
                 className="btn ghost"
                 onClick={() => {
-                  track("vote_cast", { game: "imposter", round: roundNo });
+                  track("vote_cast", { ...ctx(), round: roundNo });
                   if (i === round.imposterIdx) set({ phase: { kind: "steal" } });
                   else finish(false, null);
                 }}
@@ -303,19 +351,26 @@ export default function Imposter() {
         <div className="round-side stack">
           <Board rows={players.map((p) => ({ name: p, score: scores[p] ?? 0 }))} big />
           <div className="row">
-            <button className="btn ghost" onClick={() => set({ phase: { kind: "setup" }, round: null })}>
+            <button
+              className="btn ghost"
+              onClick={() => {
+                ended("changed_players");
+                set({ phase: { kind: "setup" }, round: null });
+              }}
+            >
               Change players
             </button>
             <button
               className="btn"
               onClick={() => {
-                track("play_again", { next_game: "imposter" });
+                track("play_again", { ...ctx(), next_game: "imposter" });
                 begin();
               }}
             >
               Next round
             </button>
           </div>
+          <ShareCard roomId={s.roomId} analytics={ctx()} text={`${verdict} We're playing Imposter Movie on Timepass.`} />
         </div>
       </div>
     </div>
