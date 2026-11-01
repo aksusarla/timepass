@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ALL_LANGS, LANGS, findMovie, usePool, useSearch, type Lang, type Movie } from "@/content/movies";
+import { ALL_LANGS, COUNTS, LANGS, findMovie, usePool, useSearch, type Lang, type Movie } from "@/content/movies";
 import type { SearchIndex } from "@/lib/game";
 import { isCorrectGuess, shuffle } from "@/lib/game";
 import { newRoomId, nowMs, secondsSince, track } from "@/lib/analytics";
@@ -278,12 +278,15 @@ function SetupScreen({
             </div>
           )}
           <div className="stack">
-            <span className="label">Films from</span>
+            <span className="label">Films from · {poolSize} films to guess</span>
             <Seg<Pool>
               label="Movie pool"
               value={setup.pool}
               onChange={(pool) => setSetup({ ...setup, pool })}
-              options={[...LANGS.map((l) => ({ value: l.code as Pool, label: l.name })), { value: "both", label: "Both" }]}
+              options={[
+                ...LANGS.map((l) => ({ value: l.code as Pool, label: `${l.name} · ${COUNTS[l.code]?.puzzles ?? 0}` })),
+                { value: "both", label: `Both · ${LANGS.reduce((n, l) => n + (COUNTS[l.code]?.puzzles ?? 0), 0)}` },
+              ]}
             />
           </div>
           <div className="stack">
