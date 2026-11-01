@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ALL_LANGS, COUNTS, LANGS, findMovie, usePool, useSearch, type Lang, type Movie } from "@/content/movies";
 import type { SearchIndex } from "@/lib/game";
-import { isCorrectGuess, shuffle } from "@/lib/game";
+import { isCorrectGuess } from "@/lib/game";
+import { pickDeck, remember } from "@/lib/selection";
 import { newRoomId, nowMs, secondsSince, track } from "@/lib/analytics";
-import { usePersistentState } from "@/lib/store";
+import { loadState, saveState, usePersistentState } from "@/lib/store";
 import { beep, buzz, unlockAudio, useWakeLock } from "@/lib/device";
 import { Board, Countdown, GameTools, HowToPlay, NameList, Seg, ShareCard, TitleInput, Words, speak, stopSpeaking } from "./ui";
 
@@ -48,6 +49,8 @@ type MGState = {
 };
 
 export const MG_KEY = "game:movie-guess";
+/** Films this device has already played (oldest first), so games avoid repeats. */
+const SEEN_KEY = "seen:movie-guess";
 
 const INITIAL: MGState = {
   setup: { pool: "te", rounds: 5, teams: ["Team A", "Team B"], autoNext: true },
@@ -89,7 +92,10 @@ export default function MovieGuess() {
   // fresh = started from the setup screen (new room); Play again keeps the room.
   function start(setup: Setup, fresh = true) {
     unlockAudio();
-    const deckIds = shuffle(poolFor(langsOf(setup.pool))).slice(0, setup.rounds).map((m) => m.id);
+    // Random films this device has not played yet (see src/lib/selection.ts).
+    const seen = loadState<string[]>(SEEN_KEY, []);
+    const deckIds = pickDeck(poolFor(langsOf(setup.pool)), setup.rounds, seen).map((m) => m.id);
+    saveState(SEEN_KEY, remember(seen, deckIds));
     const roomId = fresh || !s.roomId ? newRoomId() : s.roomId;
     const t = nowMs();
     setS({ ...s, setup, phase: "playing", deckIds, results: [], clue: 0, award: null, guesses: [], roomId, gameStartedAt: t, roundStartedAt: t });
