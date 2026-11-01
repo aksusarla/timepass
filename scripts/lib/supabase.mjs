@@ -26,11 +26,12 @@ export function supabase() {
       }
     },
     /** Insert rows; with `key`, existing rows are updated instead of duplicated. */
-    async upsert(table, rows, key) {
+    /** Insert or update rows matched on `key`; with onlyNew, existing rows are left untouched. */
+    async upsert(table, rows, key, { onlyNew = false } = {}) {
       for (let i = 0; i < rows.length; i += 500) {
         await call(`${table}${key ? `?on_conflict=${key}` : ""}`, {
           method: "POST",
-          headers: { "content-type": "application/json", prefer: `${key ? "resolution=merge-duplicates," : ""}return=minimal` },
+          headers: { "content-type": "application/json", prefer: `${key ? `resolution=${onlyNew ? "ignore" : "merge"}-duplicates,` : ""}return=minimal` },
           body: JSON.stringify(rows.slice(i, i + 500)),
         });
       }
