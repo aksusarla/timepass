@@ -67,14 +67,14 @@
           "table": "films",
           "filter": "language=eq.te",
           "file": "data/raw/films_te.csv",
-          "order": "wikidata_id",
+          "order": "sitelinks.desc,wikidata_id",
           "key": "wikidata_id,language"
         },
         {
           "table": "films",
           "filter": "language=eq.ta",
           "file": "data/raw/films_ta.csv",
-          "order": "wikidata_id",
+          "order": "sitelinks.desc,wikidata_id",
           "key": "wikidata_id,language"
         },
         {

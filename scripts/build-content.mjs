@@ -129,11 +129,14 @@ for (const lang of cfg.languages) {
     const a = Array.from(new Set([...(cur?.a ?? []), ...extra, native].filter((x) => x && norm(x) !== key)));
     byKey.set(key, { t: title, y: year || undefined, f: fame, a });
   };
-  for (const r of raw ?? []) {
-    // Fame: tiering score (0-100) when known, else a sitelinks-based estimate below 50.
-    const fame = fameById.get(r.wikidata_id) ?? Math.min(49, Number(r.sitelinks) || 0);
-    add(r.title_en, r.title_native, Number(r.year), fame);
-  }
+  // Fame: tiering score (0-100) when known, else a sitelinks-based estimate below 50.
+  const fameOf = (r) => fameById.get(r.wikidata_id) ?? Math.min(49, Number(r.sitelinks) || 0);
+  // Fixed order (fame, then sitelinks, then id) so ties resolve the same way
+  // whatever order the snapshot rows arrive in (Sheets and Supabase differ).
+  const rows = [...(raw ?? [])].sort(
+    (x, y) => fameOf(y) - fameOf(x) || (Number(y.sitelinks) || 0) - (Number(x.sitelinks) || 0) || x.wikidata_id.localeCompare(y.wikidata_id),
+  );
+  for (const r of rows) add(r.title_en, r.title_native, Number(r.year), fameOf(r));
   // Puzzle films are always present, with their aliases, but keep their normal
   // fame rank: pushing answers to the top of suggestions would give them away.
   for (const p of puzzles[lang.code]) {

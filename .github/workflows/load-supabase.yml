@@ -40,11 +40,13 @@ jobs:
         run: node scripts/supabase-push.mjs
       - name: Read back and compare
         run: |
+          node scripts/build-content.mjs --quiet && cp -r src/content/generated /tmp/before
           node scripts/sync-supabase.mjs
-          if git diff --quiet -- data/; then
-            echo "Round trip clean: Supabase matches data/ exactly."
-          else
-            git diff --stat -- data/
-            echo "::warning::Supabase differs from data/ (see the list above)."
-          fi
+          git diff --stat -- data/ | tail -1
           node scripts/build-content.mjs
+          if diff -rq /tmp/before src/content/generated; then
+            echo "Round trip clean: the site builds exactly the same from Supabase."
+          else
+            echo "::error::The site would build differently from Supabase (files listed above)."
+            exit 1
+          fi
