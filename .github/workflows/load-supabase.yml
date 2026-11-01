@@ -29,8 +29,9 @@ jobs:
           fi
       - name: Check the tables exist
         run: |
-          code=$(curl -s -o /dev/null -w "%{http_code}" "$SUPABASE_URL/rest/v1/movies?select=movie_code&limit=1" \
-            -H "apikey: $SUPABASE_SECRET_KEY" -H "Authorization: Bearer $SUPABASE_SECRET_KEY")
+          auth=(-H "apikey: $SUPABASE_SECRET_KEY")
+          case "$SUPABASE_SECRET_KEY" in sb_*) ;; *) auth+=(-H "Authorization: Bearer $SUPABASE_SECRET_KEY");; esac
+          code=$(curl -s -o /dev/null -w "%{http_code}" "${auth[@]}" "$SUPABASE_URL/rest/v1/movies?select=movie_code&limit=1")
           if [ "$code" != "200" ]; then
             echo "::error::Supabase answered $code. Run supabase/schema.sql in the SQL Editor first (and check the key)."
             exit 1
