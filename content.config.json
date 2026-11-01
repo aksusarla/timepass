@@ -53,6 +53,37 @@
           }
         ]
       }
-    ]
+    ],
+    "supabase": {
+      "$comment": "Used when SUPABASE_URL and SUPABASE_SECRET_KEY are set (then Supabase replaces the Google Sheets source). Each entry is one table (optionally filtered) copied to one CSV.",
+      "tables": [
+        {
+          "table": "movies",
+          "file": "data/content-bank/movies.csv",
+          "order": "movie_code",
+          "key": "movie_code"
+        },
+        {
+          "table": "films",
+          "filter": "language=eq.te",
+          "file": "data/raw/films_te.csv",
+          "order": "wikidata_id",
+          "key": "wikidata_id,language"
+        },
+        {
+          "table": "films",
+          "filter": "language=eq.ta",
+          "file": "data/raw/films_ta.csv",
+          "order": "wikidata_id",
+          "key": "wikidata_id,language"
+        },
+        {
+          "table": "tiering",
+          "file": "data/raw/tiering.csv",
+          "order": "id",
+          "key": null
+        }
+      ]
+    }
   }
 }

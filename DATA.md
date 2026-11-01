@@ -1,5 +1,8 @@
 # Timepass data: where it lives and how it reaches players
 
+> **Source of truth: Supabase** (Postgres) once its two GitHub secrets are set;
+> until then the Google Sheets below. Everything after the source is the same.
+
 ## The flow
 
 ```
@@ -77,3 +80,32 @@ SELECT title_en, year, sitelinks FROM films WHERE language = 'te' ORDER BY sitel
 Revisit when the Movies tab passes ~10,000 rows or several people edit at
 once (CEO decision). The site side won't change: only the source moves, e.g.
 to a database that exports the same CSVs.
+
+## Supabase (the content bank database)
+
+**Tables:** `movies` (puzzle films, same columns as the old Movies tab, plus
+`wikidata_id`), `films` (raw Wikidata list, one row per film per language),
+`tiering` (fame scores), `movie_changes` (automatic history of every edit).
+**Views:** `movies_progress` (count by language and status), `shortlist_todo`
+(Easy/Medium/Hard films not yet in `movies`).
+
+**Rules the database enforces as you type:** code format `te-0001` matching the
+language; status is draft / in review / verified / retired; difficulty 1–3;
+verified rows need verified_by, verified_on, year, hero, director and a
+storyline; codes can't be changed; rows can't be deleted (retire them). Next
+free code: `select next_movie_code('te');`
+
+**Security:** row-level security is on with no public access. People edit in
+the Supabase dashboard; only the sync job holds the secret key.
+
+### One-time setup (owner, ~15 minutes)
+1. supabase.com → New project (region: **Mumbai, ap-south-1**). Save the database password.
+2. SQL Editor → New query → paste `supabase/schema.sql` → Run.
+3. Project Settings → API Keys → create a **secret key**. Copy it and the project URL.
+4. Load today's data from a laptop with this repo:
+   `SUPABASE_URL=https://<project>.supabase.co SUPABASE_SECRET_KEY=sb_secret_... npm run data:push`
+5. GitHub → Settings → Secrets and variables → Actions: add `SUPABASE_URL` and
+   `SUPABASE_SECRET_KEY`. From the next sync on, Supabase is the source.
+6. Invite the Data Team: Supabase → Organization → Team → Invite (role: Developer).
+
+Once Supabase is the source, freeze the Google Sheets (view only) so nobody edits the old copy.

@@ -11,9 +11,10 @@
     "test": "node --test src/lib/*.test.ts scripts/lib/*.test.mjs",
     "check:content": "node scripts/build-content.mjs",
     "predev": "node scripts/build-content.mjs --quiet",
-    "data:sync": "node scripts/sync-sheets.mjs",
+    "data:sync": "node scripts/sync-content.mjs",
     "data:db": "node --no-warnings scripts/content-db.mjs",
-    "pretest": "node scripts/build-content.mjs --quiet"
+    "pretest": "node scripts/build-content.mjs --quiet",
+    "data:push": "node scripts/supabase-push.mjs"
   },
   "dependencies": {
     "next": "16.4.3",
