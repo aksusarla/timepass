@@ -50,7 +50,7 @@ type MGState = {
 
 export const MG_KEY = "game:movie-guess";
 /** Films this device has already played (oldest first), so games avoid repeats. */
-const SEEN_KEY = "seen:movie-guess";
+export const SEEN_KEY = "seen:movie-guess";
 
 const INITIAL: MGState = {
   setup: { pool: "te", rounds: 5, teams: ["Team A", "Team B"], autoNext: true },
