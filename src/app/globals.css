@@ -252,3 +252,6 @@ footer { border-top: 1px solid var(--line); margin-top: 48px; padding-top: 16px;
 footer .privacy { flex-basis: 100%; max-width: 70ch; line-height: 1.5; color: var(--muted); }
 .share { border-top: 1px solid var(--line); padding-top: 16px; margin-top: 4px; }
 .feedback { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sugg button { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.sugg .yr { color: var(--muted); font-size: var(--step-0); font-variant-numeric: tabular-nums; flex: none; }
+.loading { padding-block: 64px; text-align: center; color: var(--muted); }

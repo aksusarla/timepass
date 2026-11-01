@@ -5,6 +5,7 @@ name: Checks
 on:
   pull_request:
     branches: [main]
+  workflow_dispatch: # started by the content-sync job for its pull request
 
 permissions:
   contents: read

@@ -1,0 +1,58 @@
+{
+  "$comment": "Content publishing rules. The Data Team edits Google Sheets; scripts/build-content.mjs turns the data/ snapshot into what the site loads. Changing this file goes through the normal pull-request approval.",
+  "languages": [
+    {
+      "code": "te",
+      "name": "Telugu",
+      "native": "తెలుగు",
+      "raw": "data/raw/films_te.csv"
+    },
+    {
+      "code": "ta",
+      "name": "Tamil",
+      "native": "தமிழ்",
+      "raw": "data/raw/films_ta.csv"
+    }
+  ],
+  "publishStatuses": [
+    "verified",
+    "draft"
+  ],
+  "publishStatusesNote": "BETA OVERRIDE: the sheet guide says the site reads only verified rows. Draft rows are published until the Data Team verifies the first puzzles; then set this to [\"verified\"].",
+  "minPuzzlesPerLanguage": 5,
+  "betaTargetPerLanguage": 60,
+  "storylineMaxWords": 35,
+  "sources": {
+    "$comment": "Google Sheets the sync job copies into data/. IDs are not secret: the sheets stay private and the job reads them with a read-only service account.",
+    "sheets": [
+      {
+        "name": "Timepass Content Bank",
+        "id": "1Q3_tXyqhbae8HLP25qZn2h4r5wHSELLp8R80pf-znp8",
+        "tabs": [
+          {
+            "tab": "Movies",
+            "file": "data/content-bank/movies.csv"
+          }
+        ]
+      },
+      {
+        "name": "Timepass Raw Film Data (Wikidata)",
+        "id": "1vlfAFdN9mZssYN3siljWAwgTg7eOl1o75TQk5EW_8bI",
+        "tabs": [
+          {
+            "tab": "Telugu raw",
+            "file": "data/raw/films_te.csv"
+          },
+          {
+            "tab": "Tamil raw",
+            "file": "data/raw/films_ta.csv"
+          },
+          {
+            "tab": "Tiering 2006-2025",
+            "file": "data/raw/tiering.csv"
+          }
+        ]
+      }
+    ]
+  }
+}

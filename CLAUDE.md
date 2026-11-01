@@ -18,16 +18,20 @@ embarrassing; prefer the simplest thing that works.
   Never rename a live event; never send names, nicknames or typed titles.
 
 ## Layout
-- `src/content/movies.ts` - content bank (te, ta) + autocomplete decoys
+- `data/` - CSV snapshot of the Data Team's Google Sheets (synced daily via PR; never edit by hand)
+- `content.config.json` - languages, sheet sources, publish statuses
+- `scripts/build-content.mjs` - validates data/ and writes `src/content/generated/` (per-language puzzles + search, lazy-loaded)
+- `src/content/movies.ts` - loaders and hooks (`usePool`, `useSearch`); no data in code
+- `DATA.md` - data architecture and Data Team workflow
 - `src/lib/game.ts` - title matching, suggestions, imposter pick (pure, tested)
 - `src/components/MovieGuess.tsx`, `Imposter.tsx`, `Home.tsx`, `ui.tsx`
-- `scripts/validate-content.mjs` - runs before every build
 - `scripts/inline-build.mjs` - single-file preview bundle
 
 ## Rules
 - Mobile first: design for a 360-400px phone screen, big tap targets.
 - Match the portfolio look: monochrome tokens, Inter, indexed labels, pill buttons.
 - Hidden information (imposter, real movie) must live server-side once online.
+- Content changes go through the Google Sheet, not code. Never put movie data in components.
 - Copyright-safe content only: our own plot summaries, emoji, and plain facts
   (names, years). No dialogue, lyrics, posters, stills, audio or video clips.
 - No real-money, betting or gambling mechanics.

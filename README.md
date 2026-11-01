@@ -83,11 +83,17 @@ Add yourself to the bypass list so you can still push your own fixes.
 `node scripts/inline-build.mjs out/index.html dist/timepass.html` bundles the
 built site into one HTML file, used for the claude.ai preview link.
 
-## Adding movies
+## Content (movies and titles)
 
-Edit `src/content/movies.ts`. Storylines are our own words, 20–30 simple words,
-never the title. Names and years are facts. Add common English spellings to
-`aliases`. Run `npm run check:content`. Beta target: 60+ per language.
+The content lives in the Data Team's Google Sheets and is copied into
+`data/` by the daily **Sync content** action, through a pull request.
+`npm run check:content` validates it and builds the per-language files the
+site loads. Full flow, rules and setup: [DATA.md](DATA.md).
+
+One-time setup for the sync: create a Google Cloud service account (no
+roles needed), add its JSON key as the repo secret
+`GOOGLE_SERVICE_ACCOUNT_JSON`, share both sheets with its email as Viewer,
+and allow Actions to create pull requests (Settings > Actions > General).
 
 ## Working with Claude Code
 

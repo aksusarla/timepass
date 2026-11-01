@@ -21,7 +21,7 @@ export default function App() {
       <main className="wrap">
         {route === "movie-guess" ? <MovieGuess /> : route === "imposter" ? <Imposter /> : <Home />}
         <footer>
-          <span>Timepass Beta · v0.4</span>
+          <span>Timepass Beta · v0.5</span>
           <span>No clips, stills or songs. Our words, our voice.</span>
           <span className="privacy">
             Privacy: we count anonymous usage (which games are played, how far) to improve Timepass. No names, numbers or

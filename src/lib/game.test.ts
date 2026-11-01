@@ -40,3 +40,19 @@ test("imposter is never a player who submitted the real movie", () => {
   }
   assert.equal(pickImposterRound(["Eega", "EEGA", "eega", "Eega"]), null);
 });
+
+test("search index ranks by fame, matches spellings and native script, hides excluded", async () => {
+  const { buildIndex, searchTitles } = await import("./game.ts");
+  const idx = buildIndex([
+    ["RRR", 2022, ["ఆర్.ఆర్.ఆర్."]],
+    ["Baahubali: The Beginning", 2015, ["bahubali"]],
+    ["Bahubali (1990 film)", 1990],
+    ["Rangasthalam", 2018],
+    ["RRR", 1999], // duplicate title: first (more famous) wins
+  ]);
+  assert.equal(idx.titles.length, 4);
+  assert.deepEqual(searchTitles("ba", idx).map((r) => r.title), ["Baahubali: The Beginning", "Bahubali (1990 film)"]);
+  assert.deepEqual(searchTitles("ఆర్", idx).map((r) => r.title), ["RRR"]);
+  assert.deepEqual(searchTitles("ra", idx, 5, new Set(["Rangasthalam"])), []);
+  assert.deepEqual(searchTitles("r", idx), []);
+});

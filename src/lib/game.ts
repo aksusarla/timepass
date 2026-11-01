@@ -66,3 +66,52 @@ export function pickImposterRound(
   const imposterIdx = candidates[Math.floor(rand() * candidates.length)];
   return { realMovie: submissions[ownerIdx], ownerIdx, imposterIdx };
 }
+
+/* ---------- Fast title search over thousands of films ---------- */
+
+/** [title, year, alternative spellings?] as stored in search-<lang>.json, most famous first. */
+export type SearchRow = [string, number, string[]?];
+
+export type SearchIndex = {
+  titles: string[];
+  years: number[];
+  keys: string[][]; // normalized title + spellings, computed once
+};
+
+export function buildIndex(rows: SearchRow[]): SearchIndex {
+  const seen = new Set<string>();
+  const index: SearchIndex = { titles: [], years: [], keys: [] };
+  for (const [title, year, alts] of rows) {
+    const k = normalizeTitle(title);
+    if (!k || seen.has(k)) continue;
+    seen.add(k);
+    index.titles.push(title);
+    index.years.push(year);
+    index.keys.push([k, ...(alts ?? []).map(normalizeTitle).filter(Boolean)]);
+  }
+  return index;
+}
+
+/**
+ * Up to `limit` matches after 2 characters: titles that start with the query
+ * first, then ones containing it, each in fame order. `exclude` hides titles
+ * (e.g. wrong guesses already made this round).
+ */
+export function searchTitles(
+  query: string,
+  index: SearchIndex,
+  limit = 5,
+  exclude: ReadonlySet<string> = new Set(),
+): { title: string; year: number }[] {
+  const q = normalizeTitle(query);
+  if (q.length < 2) return [];
+  const starts: number[] = [];
+  const contains: number[] = [];
+  for (let i = 0; i < index.titles.length && starts.length < limit; i++) {
+    if (exclude.has(index.titles[i])) continue;
+    const ks = index.keys[i];
+    if (ks.some((k) => k.startsWith(q))) starts.push(i);
+    else if (contains.length < limit && ks.some((k) => k.includes(q))) contains.push(i);
+  }
+  return [...starts, ...contains].slice(0, limit).map((i) => ({ title: index.titles[i], year: index.years[i] }));
+}

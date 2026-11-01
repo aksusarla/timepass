@@ -1,0 +1,75 @@
+# Copies the Data Team's Google Sheets into data/ every morning (and on demand),
+# checks the content, and opens a pull request for Abhi to approve. Nothing
+# reaches players until that pull request is merged.
+#
+# One-time setup (owner):
+#  1. Secret GOOGLE_SERVICE_ACCOUNT_JSON = key of a read-only Google service
+#     account; share both sheets with its email as Viewer.
+#  2. Settings > Actions > General > Workflow permissions: tick
+#     "Allow GitHub Actions to create and approve pull requests".
+name: Sync content
+
+on:
+  schedule:
+    - cron: "30 0 * * *" # 06:00 IST daily
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+concurrency:
+  group: content-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Copy sheets into data/
+        run: node scripts/sync-sheets.mjs | tee sync.log
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+      - name: Check the content
+        id: check
+        run: |
+          set +e
+          node scripts/build-content.mjs > check.log 2>&1
+          echo "ok=$([ $? -eq 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          cat check.log
+      - name: Open or update the pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet -- data; then echo "No content changes."; exit 0; fi
+          git config user.name "timepass-content-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B content-sync
+          git add data
+          git commit -m "Content sync from Google Sheets ($(date -u +%Y-%m-%d))"
+          git push --force origin content-sync
+          {
+            echo "Automatic copy of the Data Team's Google Sheets."
+            echo
+            if [ "${{ steps.check.outputs.ok }}" = "true" ]; then echo "**Content check: passed.**"; else echo "**Content check: FAILED.** Fix the rows below in the sheet; the next sync updates this pull request."; fi
+            echo
+            echo '```'; cat sync.log check.log; echo '```'
+            echo
+            echo "Merging publishes these changes to the live site."
+          } > body.md
+          if gh pr view content-sync --json state -q .state 2>/dev/null | grep -q OPEN; then
+            gh pr edit content-sync --body-file body.md
+          else
+            gh pr create --head content-sync --base main --title "Content sync from Google Sheets" --body-file body.md
+          fi
+          # Pull requests opened by this bot don't start other workflows on
+          # their own; start the required Checks run on the branch explicitly.
+          gh workflow run checks.yml --ref content-sync
+      - name: Fail if the content check failed
+        if: steps.check.outputs.ok != 'true'
+        run: exit 1

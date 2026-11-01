@@ -1,6 +1,6 @@
 "use client";
 
-import { MOVIES, LANGS } from "@/content/movies";
+import { COUNTS, LANGS, prefetch } from "@/content/movies";
 import { useEffect } from "react";
 import { landingParams, track } from "@/lib/analytics";
 import { Arrow, Words, href, useSavedGame } from "./ui";
@@ -20,13 +20,16 @@ function resumeLabel(key: string, raw: string | null): string | null {
 }
 
 export default function Home() {
-  const perLang = LANGS.map((l) => MOVIES.filter((m) => m.lang === l.code).length);
+  const perLang = LANGS.map((l) => COUNTS[l.code]?.puzzles ?? 0);
   const mgResume = resumeLabel(MG_KEY, useSavedGame(MG_KEY));
   const imResume = resumeLabel(IM_KEY, useSavedGame(IM_KEY));
 
   useEffect(() => {
     const { ref, utm_source } = landingParams();
     track("landing_viewed", { language: "en", browser_language: navigator.language, ref, utm_source });
+    // Fetch the (small) puzzle files while the visitor reads the home page.
+    const idle = window.setTimeout(() => prefetch(), 1500);
+    return () => window.clearTimeout(idle);
   }, []);
 
   return (

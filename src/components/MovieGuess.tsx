@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { LANGS, MOVIES, aliasesFor, poolFor, titlesFor, type Lang, type Movie } from "@/content/movies";
+import { ALL_LANGS, LANGS, findMovie, usePool, useSearch, type Lang, type Movie } from "@/content/movies";
+import type { SearchIndex } from "@/lib/game";
 import { isCorrectGuess, shuffle } from "@/lib/game";
 import { newRoomId, nowMs, secondsSince, track } from "@/lib/analytics";
 import { usePersistentState } from "@/lib/store";
@@ -60,15 +61,19 @@ const INITIAL: MGState = {
 
 const SOLO = "You";
 
-const byId = (id: string) => MOVIES.find((m) => m.id === id);
 const langsOf = (p: Pool): Lang[] => (p === "both" ? ["te", "ta"] : [p]);
 const poolLabel = (p: Pool) => (p === "both" ? "Telugu + Tamil" : LANGS.find((l) => l.code === p)!.name);
 
 export default function MovieGuess() {
   const [s, setS] = usePersistentState<MGState>(MG_KEY, INITIAL);
-  const deck = s.deckIds.map(byId).filter((m): m is Movie => !!m);
-  useWakeLock(s.phase === "playing");
+  // Puzzle files are tiny (a few KB per language): load them all up front.
+  const pool = usePool(ALL_LANGS);
   const solo = s.setup.mode === "solo";
+  // The search list (thousands of titles) is only needed for typed answers.
+  const search = useSearch(solo && s.phase === "playing" ? langsOf(s.setup.pool) : []);
+  const deck = pool ? s.deckIds.map((id) => findMovie(pool, id)).filter((m): m is Movie => !!m) : [];
+  const poolFor = (langs: Lang[]) => (pool ?? []).filter((m) => langs.includes(m.lang));
+  useWakeLock(s.phase === "playing");
   const players = solo ? [SOLO] : s.setup.teams;
 
   // Properties shared by every Movie Guess event.
@@ -108,8 +113,10 @@ export default function MovieGuess() {
     score: s.results.filter((r) => r.winner === name).reduce((a, r) => a + r.points, 0),
   }));
 
+  if (!pool) return <div className="loading" role="status">Loading films…</div>;
+
   if (s.phase === "setup" || deck.length === 0) {
-    return <SetupScreen setup={s.setup} setSetup={(setup) => setS({ ...s, setup })} onStart={start} />;
+    return <SetupScreen setup={s.setup} poolSize={poolFor(langsOf(s.setup.pool)).length} setSetup={(setup) => setS({ ...s, setup })} onStart={start} />;
   }
 
   if (s.phase === "final") {
@@ -139,8 +146,7 @@ export default function MovieGuess() {
       total={deck.length}
       teams={players}
       solo={solo}
-      titles={titlesFor(langsOf(s.setup.pool))}
-      aliases={aliasesFor(langsOf(s.setup.pool))}
+      search={search}
       guesses={s.guesses ?? []}
       scores={scores}
       clue={s.clue}
@@ -191,8 +197,17 @@ export default function MovieGuess() {
 
 /* ---------- Setup: one big Start, settings below (PRD MG-1) ---------- */
 
-function SetupScreen({ setup, setSetup, onStart }: { setup: Setup; setSetup: (s: Setup) => void; onStart: (s: Setup) => void }) {
-  const poolSize = poolFor(langsOf(setup.pool)).length;
+function SetupScreen({
+  setup,
+  poolSize,
+  setSetup,
+  onStart,
+}: {
+  setup: Setup;
+  poolSize: number;
+  setSetup: (s: Setup) => void;
+  onStart: (s: Setup) => void;
+}) {
   const rounds = Math.min(setup.rounds, poolSize) as 5 | 10;
   const solo = setup.mode === "solo";
   return (
@@ -386,8 +401,7 @@ function Round({
   total,
   teams,
   solo,
-  titles,
-  aliases,
+  search,
   guesses,
   scores,
   clue,
@@ -407,8 +421,7 @@ function Round({
   total: number;
   teams: string[];
   solo: boolean;
-  titles: string[];
-  aliases: Record<string, string[]>;
+  search: SearchIndex | null;
   guesses: string[];
   scores: { name: string; score: number }[];
   clue: number;
@@ -462,8 +475,6 @@ function Round({
     }
   }
 
-  // Titles already tried this round are taken out of the list.
-  const open = titles.filter((t) => !guesses.includes(t));
 
   const preview = award?.winner ? scores.map((x) => (x.name === award.winner ? { ...x, score: x.score + award.points } : x)) : scores;
 
@@ -495,7 +506,7 @@ function Round({
             {solo ? (
               <div className="stack">
                 <span className="label">Your guess · pick from the list</span>
-                <TitleInput key={clue} titles={open} aliases={aliases} onPick={guess} placeholder="Type the film's name" />
+                <TitleInput key={clue} index={search} exclude={guesses} onPick={guess} placeholder="Type the film's name" />
                 {guesses.length > 0 && (
                   <p className="muted" role="status" aria-live="polite">
                     Not {guesses.join(", not ")}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { LANGS, titlesFor, type Lang } from "@/content/movies";
+import { LANGS, useSearch, type Lang } from "@/content/movies";
 import { normalizeTitle, pickImposterRound, shuffle } from "@/lib/game";
 import { newRoomId, nowMs, secondsSince, track } from "@/lib/analytics";
 import { usePersistentState } from "@/lib/store";
@@ -49,7 +49,7 @@ export default function Imposter() {
   useWakeLock(phase.kind !== "setup");
 
   const langs: Lang[] = pool === "both" ? ["te", "ta"] : [pool];
-  const titles = titlesFor(langs);
+  const titles = useSearch(phase.kind === "submit" || phase.kind === "steal" ? langs : []);
   const name = (i: number) => players[i];
   // Properties shared by every Imposter event. No player names or movie titles.
   const ctx = (roomId: string | undefined = s.roomId) => ({ game: "imposter", language: pool, mode: "same_room", role: "host", room_id: roomId });
@@ -203,7 +203,7 @@ export default function Imposter() {
           <div className="panel stack">
             <p className="ask">{p}, pick any well-known movie. Keep it secret.</p>
             <TitleInput
-              titles={titles}
+              index={titles}
               allowFreeText
               autoFocus
               placeholder="Type a movie name"
@@ -313,7 +313,7 @@ export default function Imposter() {
           <p className="muted">
             {imp}, you saw “{round.subs[round.imposterIdx]}”. Everyone else saw a different movie. Name it to steal the round.
           </p>
-          <TitleInput titles={titles} allowFreeText placeholder="Your guess" onPick={(g) => finish(true, normalizeTitle(g) === normalizeTitle(round.realMovie), g)} />
+          <TitleInput index={titles} allowFreeText placeholder="Your guess" onPick={(g) => finish(true, normalizeTitle(g) === normalizeTitle(round.realMovie), g)} />
         </div>
       </div>
     );

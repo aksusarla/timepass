@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useMemo, useState, useSyncExternalStore } from "react";
-import { normalizeTitle, suggest } from "@/lib/game";
+import { normalizeTitle, searchTitles, type SearchIndex } from "@/lib/game";
 import { loadState, saveState } from "@/lib/store";
 import { canFullscreen, toggleFullscreen } from "@/lib/device";
 import { shareUrl, track } from "@/lib/analytics";
@@ -129,23 +129,26 @@ export function Seg<T extends string | number>({
 /* ---------- Title input with autocomplete (PRD MG-3) ---------- */
 
 export function TitleInput({
-  titles,
+  index,
   onPick,
   placeholder = "Type a movie name",
   allowFreeText = false,
   autoFocus = false,
-  aliases,
+  exclude,
 }: {
-  titles: string[];
+  /** Search index from useSearch(); null while it downloads. */
+  index: SearchIndex | null;
   onPick: (title: string) => void;
   placeholder?: string;
   allowFreeText?: boolean;
   autoFocus?: boolean;
-  /** title -> accepted alternative spellings, matched in suggestions */
-  aliases?: Record<string, string[]>;
+  /** Titles to hide, e.g. wrong guesses already made */
+  exclude?: string[];
 }) {
   const [q, setQ] = useState("");
-  const list = useMemo(() => suggest(q, titles, 5, aliases), [q, titles, aliases]);
+  const hidden = useMemo(() => new Set(exclude ?? []), [exclude]);
+  const matches = useMemo(() => (index ? searchTitles(q, index, 5, hidden) : []), [q, index, hidden]);
+  const list = matches.map((m) => m.title);
   function pick(t: string) {
     setQ("");
     onPick(t);
@@ -171,7 +174,8 @@ export function TitleInput({
         className="input"
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        placeholder={placeholder}
+        placeholder={index ? placeholder : "Loading films…"}
+        disabled={!index}
         autoComplete="off"
         autoCorrect="off"
         spellCheck={false}
@@ -181,10 +185,11 @@ export function TitleInput({
       />
       {list.length > 0 && (
         <ul className="sugg">
-          {list.map((t) => (
-            <li key={t}>
-              <button type="button" onClick={() => pick(t)}>
-                {t}
+          {matches.map((m) => (
+            <li key={m.title}>
+              <button type="button" onClick={() => pick(m.title)}>
+                {m.title}
+                {m.year > 0 && <span className="yr">{m.year}</span>}
               </button>
             </li>
           ))}

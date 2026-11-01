@@ -1,15 +1,19 @@
 {
   "name": "timepass",
-  "version": "0.4.1-beta",
+  "version": "0.5.0-beta",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "prebuild": "node scripts/validate-content.mjs",
+    "prebuild": "node scripts/build-content.mjs",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test src/lib/*.test.ts",
-    "check:content": "node scripts/validate-content.mjs"
+    "test": "node --test src/lib/*.test.ts scripts/lib/*.test.mjs",
+    "check:content": "node scripts/build-content.mjs",
+    "predev": "node scripts/build-content.mjs --quiet",
+    "data:sync": "node scripts/sync-sheets.mjs",
+    "data:db": "node --no-warnings scripts/content-db.mjs",
+    "pretest": "node scripts/build-content.mjs --quiet"
   },
   "dependencies": {
     "next": "16.4.3",

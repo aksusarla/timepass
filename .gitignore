@@ -42,3 +42,7 @@ next-env.d.ts
 
 # single-file preview
 /dist
+
+# content: built from data/ by scripts/build-content.mjs
+/src/content/generated/
+/data/timepass.db
