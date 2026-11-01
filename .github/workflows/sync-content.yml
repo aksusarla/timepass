@@ -35,7 +35,7 @@ jobs:
       - name: Copy the content bank into data/
         run: node scripts/sync-content.mjs | tee sync.log
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://zbrzrbiegwqpajetdftk.supabase.co' }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
       - name: Check the content
