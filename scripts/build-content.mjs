@@ -117,7 +117,13 @@ for (const lang of cfg.languages) {
   const raw = read(lang.raw);
   if (!raw) warnings.push(`${lang.raw} is missing: search will only know the puzzle films`);
   const byKey = new Map(); // normalized title -> entry
-  const add = (title, native, year, fame, extra = []) => {
+  const add = (rawTitle, native, year, fame, extra = []) => {
+    // Clean titles: drop Wikipedia disambiguation like "Mirai (2025 film)" or "1997 (Telugu Film)".
+    const title = String(rawTitle ?? "").replace(/\s*\((?:\d{4}\s+)?(?:[a-z-]+\s+)?film\)\s*$/i, "")
+      // ...and data notes such as "(Tamil Dubbed ...)", "(Re-released)", "(2026)".
+      .replace(/\s*\((?=[^)]*(?:dub|re-?released|\b1st\b))[\s\S]*$/i, "")
+      .replace(/\s*\(\d{4}\)\s*$/, "")
+      .trim();
     const key = norm(title);
     if (!key || /^q\d+$/.test(key)) return;
     const cur = byKey.get(key);
