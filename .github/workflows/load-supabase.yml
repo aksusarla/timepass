@@ -1,0 +1,49 @@
+# One-time (safe to re-run): copies the data/ snapshot into Supabase, then
+# reads it back and checks nothing changed in the round trip.
+# Needs repo secrets SUPABASE_URL and SUPABASE_SECRET_KEY, and the tables from
+# supabase/schema.sql (run once in Supabase > SQL Editor).
+name: Load Supabase
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  load:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check secrets
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SECRET_KEY" ]; then
+            echo "::error::Add SUPABASE_URL and SUPABASE_SECRET_KEY under Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+      - name: Check the tables exist
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" "$SUPABASE_URL/rest/v1/movies?select=movie_code&limit=1" \
+            -H "apikey: $SUPABASE_SECRET_KEY" -H "Authorization: Bearer $SUPABASE_SECRET_KEY")
+          if [ "$code" != "200" ]; then
+            echo "::error::Supabase answered $code. Run supabase/schema.sql in the SQL Editor first (and check the key)."
+            exit 1
+          fi
+      - name: Load data
+        run: node scripts/supabase-push.mjs
+      - name: Read back and compare
+        run: |
+          node scripts/sync-supabase.mjs
+          if git diff --quiet -- data/; then
+            echo "Round trip clean: Supabase matches data/ exactly."
+          else
+            git diff --stat -- data/
+            echo "::warning::Supabase differs from data/ (see the list above)."
+          fi
+          node scripts/build-content.mjs
