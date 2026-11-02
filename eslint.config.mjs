@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Room server: own package, own TypeScript config.
+    "rooms/**",
   ]),
 ]);
 

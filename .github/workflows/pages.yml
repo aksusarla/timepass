@@ -36,6 +36,8 @@ jobs:
           # PostHog "Timepass - Prod" project (tracking plan v1). Set under
           # Settings > Secrets and variables > Actions. No key = analytics off.
           NEXT_PUBLIC_POSTHOG_KEY: ${{ secrets.NEXT_PUBLIC_POSTHOG_KEY || vars.NEXT_PUBLIC_POSTHOG_KEY }}
+          # Online rooms: set repo variable ROOMS_URL (the room server's address) to switch online mode on.
+          NEXT_PUBLIC_ROOMS_URL: ${{ vars.ROOMS_URL }}
           NEXT_PUBLIC_POSTHOG_HOST: ${{ secrets.NEXT_PUBLIC_POSTHOG_HOST || vars.NEXT_PUBLIC_POSTHOG_HOST || 'https://eu.i.posthog.com' }}
       - run: touch out/.nojekyll
       - uses: actions/upload-pages-artifact@v3

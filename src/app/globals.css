@@ -255,3 +255,17 @@ footer .privacy { flex-basis: 100%; max-width: 70ch; line-height: 1.5; color: va
 .sugg button { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
 .sugg .yr { color: var(--muted); font-size: var(--step-0); font-variant-numeric: tabular-nums; flex: none; }
 .loading { padding-block: 64px; text-align: center; color: var(--muted); }
+
+/* Online rooms */
+.room-code { font-size: var(--step-5); font-weight: 800; letter-spacing: 0.18em; line-height: 1; }
+.teams { display: grid; gap: 0 24px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+.team .row { justify-content: space-between; }
+.team.mine .label { color: var(--fg); font-weight: 700; }
+.team.mine .label::after { content: " · your team"; font-weight: 500; color: var(--muted); }
+.team .players li { justify-content: space-between; min-height: 44px; }
+.team .players li.muted { color: var(--faint); }
+.guesses, .history { list-style: none; margin: 0; padding: 0; font-size: var(--step-0); }
+.guesses li, .history li { padding-block: 6px; border-bottom: 1px solid var(--line); }
+.history { counter-reset: h; }
+.history li::before { counter-increment: h; content: counter(h) ". "; color: var(--faint); }
+.online form.row .input { flex: 1 1 120px; text-transform: uppercase; letter-spacing: 0.12em; }

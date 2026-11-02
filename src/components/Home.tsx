@@ -1,6 +1,7 @@
 "use client";
 
 import { COUNTS, LANGS, prefetch } from "@/content/movies";
+import { onlineEnabled } from "@/lib/online";
 import { useEffect } from "react";
 import { landingParams, track } from "@/lib/analytics";
 import { Arrow, Words, href, useSavedGame } from "./ui";
@@ -88,12 +89,24 @@ export default function Home() {
           </h4>
           <p>Link each film to the last through a shared star or director, before the timer runs out. Coming after playtests.</p>
         </div>
-        <div className="soon">
-          <h4>
-            <Words text="Play from every phone" />
-          </h4>
-          <p>Online rooms, so everyone can join from their own phone, wherever they are. Coming soon. For now, one phone runs the game.</p>
-        </div>
+        {onlineEnabled ? (
+          <a className="soon" href="#online" onClick={() => track("game_selected", { game: "movie_guess", mode: "online" })}>
+            <h4>
+              <Words text="Play from every phone" />
+            </h4>
+            <p>Movie Guess online, in teams: everyone joins from their own phone with a room code. In beta.</p>
+            <span className="btn">
+              Play online <Arrow />
+            </span>
+          </a>
+        ) : (
+          <div className="soon">
+            <h4>
+              <Words text="Play from every phone" />
+            </h4>
+            <p>Online rooms, so everyone can join from their own phone, wherever they are. Coming soon. For now, one phone runs the game.</p>
+          </div>
+        )}
       </section>
     </>
   );

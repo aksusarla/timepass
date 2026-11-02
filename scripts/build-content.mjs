@@ -182,6 +182,8 @@ for (const lang of cfg.languages) {
   writeFileSync(join(OUT, `search-${lang.code}.json`), JSON.stringify(search[lang.code]));
   counts[lang.code] = { puzzles: puzzles[lang.code].length, titles: search[lang.code].length };
 }
+// Every language's puzzles in one file, for the online room server (rooms/worker.ts).
+writeFileSync(join(OUT, "puzzles-all.json"), JSON.stringify(Object.values(puzzles).flat()));
 const langs = cfg.languages.map(({ code, name, native }) => ({ code, name, native }));
 const loaders = (kind) =>
   cfg.languages.map((l) => `  ${l.code}: () => import("./${kind}-${l.code}.json").then((m) => m.default as unknown),`).join("\n");

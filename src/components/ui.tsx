@@ -8,10 +8,11 @@ import { shareUrl, track } from "@/lib/analytics";
 
 /* ---------- Hash routing: works on GitHub Pages and any static host ---------- */
 
-export type Route = "home" | "movie-guess" | "imposter";
+export type Route = "home" | "movie-guess" | "imposter" | "online";
 
 function readRoute(): Route {
   const h = typeof window === "undefined" ? "" : window.location.hash.replace(/^#\/?/, "");
+  if (h === "online" || h.startsWith("room=")) return "online"; // #room=ABCD opens that room
   return h === "movie-guess" || h === "imposter" ? h : "home";
 }
 function subscribeHash(cb: () => void) {

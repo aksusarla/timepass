@@ -6,6 +6,7 @@ import { Bar, useRoute } from "./ui";
 import Home from "./Home";
 import MovieGuess from "./MovieGuess";
 import Imposter from "./Imposter";
+import Online from "./Online";
 
 export default function App() {
   const route = useRoute();
@@ -19,7 +20,7 @@ export default function App() {
     <>
       <Bar route={route} />
       <main className="wrap">
-        {route === "movie-guess" ? <MovieGuess /> : route === "imposter" ? <Imposter /> : <Home />}
+        {route === "movie-guess" ? <MovieGuess /> : route === "imposter" ? <Imposter /> : route === "online" ? <Online /> : <Home />}
         <footer>
           <span>Timepass Beta · v0.5</span>
           <span>No clips, stills or songs. Our words, our voice.</span>

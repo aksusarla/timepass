@@ -46,3 +46,7 @@ next-env.d.ts
 # content: built from data/ by scripts/build-content.mjs
 /src/content/generated/
 /data/timepass.db
+
+# Room server
+rooms/node_modules
+rooms/.wrangler
