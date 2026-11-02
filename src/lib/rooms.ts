@@ -5,8 +5,8 @@
 // Online Movie Guess (Teams), PRD 6.1 + 7:
 //   lobby: players join with a nickname and pick a team; the host sets the
 //          language pool, rounds and team names, then starts.
-//   clue:  every phone sees the same clue ladder (story, hero, heroine,
-//          director) and timer. Anyone can guess for their team. A wrong guess
+//   clue:  every phone sees the same clue ladder (story, director, heroine,
+//          hero) and timer. Anyone can guess for their team. A wrong guess
 //          locks that team until the next clue. First correct guess wins the
 //          round for the team, worth 4/3/2/1 by clue.
 //   reveal: everyone sees the answer; the host starts the next round.
@@ -17,9 +17,9 @@ import { pickDeck, remember } from "./selection.ts";
 
 export const CLUES = [
   { key: "storyline", label: "The story", pts: 4 },
-  { key: "hero", label: "Hero", pts: 3 },
+  { key: "director", label: "Director", pts: 3 },
   { key: "heroine", label: "Heroine", pts: 2 },
-  { key: "director", label: "Director", pts: 1 },
+  { key: "hero", label: "Hero", pts: 1 },
 ] as const;
 export const CLUE_MS = 30_000; // longer than same-room (20 s): everyone types on their own phone
 export const MAX_PLAYERS = 12;

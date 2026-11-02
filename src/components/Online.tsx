@@ -313,7 +313,7 @@ function Lobby({ view, send }: { view: RoomView; send: Send }) {
         id="movie-guess-online"
         title="How to play online"
         steps={[
-          "Everyone sees the same clue: first the story, then the hero, heroine and director.",
+          "Everyone sees the same clue: first the story, then the director, heroine and hero.",
           "Anyone can guess for their team. A wrong guess locks your team until the next clue.",
           "First right answer wins the round. Earlier clues score more: 4, 3, 2, 1.",
         ]}

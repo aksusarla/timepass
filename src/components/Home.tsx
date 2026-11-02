@@ -65,7 +65,7 @@ export default function Home() {
         <div className="cards">
           <GameCard
             title="Movie Guess"
-            text="Guess the film from clues that get easier: the story, then the hero, heroine and director. Guess early, score more."
+            text="Guess the film from clues that get easier: the story, then the director, heroine and hero. Guess early, score more."
             tags={["Solo or 2–6 teams", "8–15 min", `${totalFilms} films`]}
             route="movie-guess"
             cta={mgResume ? `Resume, round ${mgResume.replace("Round ", "")}` : "Play Movie Guess"}
@@ -174,9 +174,9 @@ function GameCard(props: {
 
 const TASTER_CLUES: { key: "storyline" | "hero" | "heroine" | "director"; label: string }[] = [
   { key: "storyline", label: "The story" },
-  { key: "hero", label: "Hero" },
-  { key: "heroine", label: "Heroine" },
   { key: "director", label: "Director" },
+  { key: "heroine", label: "Heroine" },
+  { key: "hero", label: "Hero" },
 ];
 
 function pickTaster(pool: Movie[], seed: number): Movie | undefined {
