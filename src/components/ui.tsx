@@ -5,6 +5,8 @@ import { normalizeTitle, searchTitles, type SearchIndex } from "@/lib/game";
 import { loadState, saveState } from "@/lib/store";
 import { canFullscreen, toggleFullscreen } from "@/lib/device";
 import { shareUrl, track } from "@/lib/analytics";
+import { LANGS } from "@/content/movies";
+import { setFilmLang, type FilmLang } from "@/lib/lang";
 
 /* ---------- Hash routing: works on GitHub Pages and any static host ---------- */
 
@@ -639,6 +641,38 @@ export function ShareCard({ text, roomId, analytics }: { text: string; roomId?: 
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+/* ---------- Film language picker (Telugu / Tamil / Both), shared by every screen ---------- */
+
+export function LangPicker({
+  value,
+  onChange = setFilmLang,
+  both = true,
+  counts,
+  label = "Film language",
+}: {
+  value: FilmLang;
+  onChange?: (lang: FilmLang) => void;
+  both?: boolean;
+  /** Optional film counts shown after each language */
+  counts?: Partial<Record<FilmLang, number>>;
+  label?: string;
+}) {
+  const options: { code: FilmLang; native?: string; name: string }[] = [
+    ...LANGS.map((l) => ({ code: l.code as FilmLang, native: l.native, name: l.name })),
+    ...(both ? [{ code: "both" as FilmLang, name: "Both" }] : []),
+  ];
+  return (
+    <div className="langs" role="group" aria-label={label}>
+      {options.map((o) => (
+        <button key={o.code} type="button" aria-pressed={value === o.code} onClick={() => onChange(o.code)}>
+          {o.native && <span className="native">{o.native}</span>} {o.name}
+          {counts?.[o.code] !== undefined && <span className="n"> · {counts[o.code]}</span>}
+        </button>
+      ))}
     </div>
   );
 }
