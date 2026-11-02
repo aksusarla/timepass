@@ -1,0 +1,105 @@
+movie_code,difficulty,wikidata_id,title_native,source_url,family_safe,notes
+ta-0001,2,,96,https://en.wikipedia.org/wiki/96_(film),yes,Rated Medium by room test: tier is Reserve (small box office) but recall is strong.
+ta-0002,1,Q2851751,அந்நியன்,https://en.wikipedia.org/wiki/Anniyan,yes,Pre-2006: rated Easy by room test.
+ta-0003,1,Q3104859,கில்லி,https://en.wikipedia.org/wiki/Ghilli,yes,Pre-2006: rated Easy by room test.
+ta-0004,2,Q3411591,காக்க காக்க,https://en.wikipedia.org/wiki/Kaakha_Kaakha,yes,Pre-2006: rated Medium by room test.
+ta-0005,1,Q283490,எந்திரன்,https://en.wikipedia.org/wiki/Enthiran,yes,Tier Easy.
+ta-0006,2,Q60738331,அசுரன்,https://en.wikipedia.org/wiki/Asuran_(2019_film),yes,Tier Medium.
+ta-0007,2,Q63135778,சூரரைப் போற்று,https://en.wikipedia.org/wiki/Soorarai_Pottru,yes,"Not shortlisted (streaming release, no box office); rated Medium by room test."
+ta-0008,2,Q2739153,ரோஜா,https://en.wikipedia.org/wiki/Roja_(film),yes,Pre-2006: rated Medium by room test (older classic).
+ta-0009,2,Q2829497,அலைபாயுதே,https://en.wikipedia.org/wiki/Alaipayuthey,yes,Pre-2006: rated Medium by room test.
+ta-0010,1,Q3473399,துப்பாக்கி,https://en.wikipedia.org/wiki/Thuppakki,yes,Tier Easy.
+ta-0011,,,ஜெயிலர்,https://en.wikipedia.org/wiki/Jailer_(2023_Tamil_film),,
+ta-0012,,,கூலி,https://en.wikipedia.org/wiki/Coolie_(2025_film),,
+ta-0013,,,2.0,https://en.wikipedia.org/wiki/2.0_(film),,
+ta-0014,,,தி கிரேட்டஸ்ட் ஆஃப் ஆல் டைம்,https://en.wikipedia.org/wiki/The_Greatest_of_All_Time,,
+ta-0015,,,பொன்னியின் செல்வன் 1,https://en.wikipedia.org/wiki/Ponniyin_Selvan:_I,,
+ta-0016,,,மாஸ்டர்,https://en.wikipedia.org/wiki/Master_(2021_film),,
+ta-0017,2,,தர்பார்,https://en.wikipedia.org/wiki/Darbar_(film),,"Moved Easy to Medium by room test: mixed reception, weaker recall."
+ta-0018,,,கபாலி,https://en.wikipedia.org/wiki/Kabali,,
+ta-0019,,,சிவாஜி,https://en.wikipedia.org/wiki/Sivaji:_The_Boss,,
+ta-0020,,,மெர்சல்,https://en.wikipedia.org/wiki/Mersal,,
+ta-0021,,,பிகில்,https://en.wikipedia.org/wiki/Bigil,,
+ta-0022,,,தசாவதாரம்,https://en.wikipedia.org/wiki/Dasavathaaram,,
+ta-0023,,,நண்பன்,https://en.wikipedia.org/wiki/Nanban_(2012_film),,
+ta-0024,,,அயன்,https://en.wikipedia.org/wiki/Ayan_(film),,
+ta-0025,2,,லிங்கா,https://en.wikipedia.org/wiki/Lingaa,,"Moved Easy to Medium by room test: flop, weaker recall."
+ta-0026,,,ஏழாம் அறிவு,https://en.wikipedia.org/wiki/7_Aum_Arivu,,
+ta-0027,2,,விஸ்வரூபம்,https://en.wikipedia.org/wiki/Vishwaroopam,,Moved Easy to Medium by room test: known more for controversy than story.
+ta-0028,,,லியோ,https://en.wikipedia.org/wiki/Leo_(2023_Indian_film),,
+ta-0029,,,பேட்ட,https://en.wikipedia.org/wiki/Petta_(film),,
+ta-0030,,,வேட்டையாடு விளையாடு,https://en.wikipedia.org/wiki/Vettaiyaadu_Vilaiyaadu,,
+ta-0031,,,விக்ரம்,https://en.wikipedia.org/wiki/Vikram_(2022_film),,No lead heroine in the film; heroine clue shows None.
+ta-0032,,,அமரன்,https://en.wikipedia.org/wiki/Amaran_(2024_film),,
+ta-0033,2,,குட் பேட் அக்லி,https://en.wikipedia.org/wiki/Good_Bad_Ugly,,"Moved Easy to Medium by room test: recent, fan-led recall."
+ta-0034,2,,அண்ணாத்த,https://en.wikipedia.org/wiki/Annaatthe,,Moved Easy to Medium by room test: weaker recall.
+ta-0035,,,தெறி,https://en.wikipedia.org/wiki/Theri_(film),,
+ta-0036,,,ஐ,https://en.wikipedia.org/wiki/I_(2015_film),,
+ta-0037,,,சர்கார்,https://en.wikipedia.org/wiki/Sarkar_(2018_film),,
+ta-0038,,,கத்தி,https://en.wikipedia.org/wiki/Kaththi,,
+ta-0039,2,,ஸ்பைடர்,https://en.wikipedia.org/wiki/Spyder_(film),,"Moved Easy to Medium by room test: Telugu-Tamil bilingual, weaker Tamil recall."
+ta-0040,,,வாரணம் ஆயிரம்,https://en.wikipedia.org/wiki/Vaaranam_Aayiram,,
+ta-0041,,,சிங்கம்,https://en.wikipedia.org/wiki/Singam,,
+ta-0042,,,போக்கிரி,https://en.wikipedia.org/wiki/Pokkiri,,
+ta-0043,,,பீஸ்ட்,https://en.wikipedia.org/wiki/Beast_(2022_Indian_film),,
+ta-0044,,,வேட்டையன்,https://en.wikipedia.org/wiki/Vettaiyan,,
+ta-0045,2,,வரலாறு,https://en.wikipedia.org/wiki/Varalaru,,"Moved Easy to Medium by room test: older (2006), weaker recall."
+ta-0046,2,,ரெட்ரோ,https://en.wikipedia.org/wiki/Retro_(film),,"Moved Easy to Medium by room test: recent, mixed reception."
+ta-0047,,,மங்காத்தா,https://en.wikipedia.org/wiki/Mankatha,,
+ta-0048,2,,காலா,https://en.wikipedia.org/wiki/Kaala_(2018_film),,Moved Easy to Medium by room test: weaker recall.
+ta-0049,2,,ஆதவன்,https://en.wikipedia.org/wiki/Aadhavan,,"Moved Easy to Medium by room test: older (2009), weaker recall."
+ta-0050,2,,சில்லுனு ஒரு காதல்,https://en.wikipedia.org/wiki/Sillunu_Oru_Kaadhal,,"Moved Easy to Medium by room test: older (2006), weaker recall."
+ta-0051,,,விண்ணைத்தாண்டி வருவாயா,https://en.wikipedia.org/wiki/Vinnaithaandi_Varuvaayaa,,
+ta-0052,2,,மாநாடு,https://en.wikipedia.org/wiki/Maanaadu,,Moved Easy to Medium by room test: mid-size hit.
+te-0001,1,Q1134677,మగధీర,https://en.wikipedia.org/wiki/Magadheera,yes,Tier Easy.
+te-0002,1,Q65057760,అల వైకుంఠపురములో,https://en.wikipedia.org/wiki/Ala_Vaikunthapurramuloo,yes,Tier Easy.
+te-0003,1,Q3234794,ఈగ,https://en.wikipedia.org/wiki/Eega,yes,Tier Easy.
+te-0004,2,Q28419404,అర్జున్ రెడ్డి,https://en.wikipedia.org/wiki/Arjun_Reddy,no,"Tier Reserve (small box office); rated Medium by room test, very high recall."
+te-0005,1,Q13897247,బాహుబలి: ది బిగినింగ్,https://en.wikipedia.org/wiki/Baahubali:_The_Beginning,yes,Tier Easy.
+te-0006,1,Q3630260,పోకిరి,https://en.wikipedia.org/wiki/Pokiri,yes,Tier Easy.
+te-0007,1,Q29832413,రంగస్థలం,https://en.wikipedia.org/wiki/Rangasthalam,yes,Tier Easy.
+te-0008,2,Q39048745,మహానటి,https://en.wikipedia.org/wiki/Mahanati,yes,Tier Medium.
+te-0009,2,Q60738016,జెర్సీ,https://en.wikipedia.org/wiki/Jersey_(2019_film),yes,Tier Reserve; rated Medium by room test.
+te-0010,2,Q55639773,గీత గోవిందం,https://en.wikipedia.org/wiki/Geetha_Govindam,yes,Tier Medium.
+te-0011,,,ఆర్.ఆర్.ఆర్.,https://en.wikipedia.org/wiki/RRR,,
+te-0012,,,సాలార్,https://en.wikipedia.org/wiki/Salaar:_Part_1_–_Ceasefire,,
+te-0013,,,పుష్ప 2: ది రూల్,https://en.wikipedia.org/wiki/Pushpa_2:_The_Rule,,
+te-0014,,,బాహుబలి 2: ది కన్‌క్లూజన్,https://en.wikipedia.org/wiki/Baahubali_2:_The_Conclusion,,
+te-0015,,,పుష్ప,https://en.wikipedia.org/wiki/Pushpa:_The_Rise,,
+te-0016,,,సాహో,https://en.wikipedia.org/wiki/Saaho,,
+te-0017,,,భరత్ అనే నేను,https://en.wikipedia.org/wiki/Bharat_Ane_Nenu,,
+te-0018,,,యమదొంగ,https://en.wikipedia.org/wiki/Yamadonga,,
+te-0019,,,అత్తారింటికి దారేది,https://en.wikipedia.org/wiki/Attarintiki_Daredi,,
+te-0020,,,కల్కి 2898 ఏ.డీ,https://en.wikipedia.org/wiki/Kalki_2898_AD,,
+te-0021,,,జనతా గ్యారేజ్,https://en.wikipedia.org/wiki/Janatha_Garage,,
+te-0022,2,,ఆదిపురుష్,https://en.wikipedia.org/wiki/Adipurush,,"Moved Easy to Medium by room test: flop, story less remembered."
+te-0023,,,మనం,https://en.wikipedia.org/wiki/Manam_(film),,
+te-0024,,,దూకుడు,https://en.wikipedia.org/wiki/Dookudu,,
+te-0025,,,సంక్రాంతికి వస్తున్నాం,https://en.wikipedia.org/wiki/Sankranthiki_Vasthunam,,
+te-0026,,,సరిలేరు నీకెవ్వరు,https://en.wikipedia.org/wiki/Sarileru_Neekevvaru,,
+te-0027,2,,సైరా నరసింహారెడ్డి,https://en.wikipedia.org/wiki/Sye_Raa_Narasimha_Reddy,,"Moved Easy to Medium by room test: historical, weaker recall."
+te-0028,2,,సర్కారు వారి పాట,https://en.wikipedia.org/wiki/Sarkaru_Vaari_Paata,,Moved Easy to Medium by room test: mid-size hit.
+te-0029,,,శ్రీమంతుడు,https://en.wikipedia.org/wiki/Srimanthudu,,
+te-0030,,,సరైనోడు,https://en.wikipedia.org/wiki/Sarrainodu,,
+te-0031,,,అరుంధతి,https://en.wikipedia.org/wiki/Arundhati_(2009_film),,
+te-0032,2,,గేమ్ ఛేంజర్,https://en.wikipedia.org/wiki/Game_Changer_(film),,"Moved Easy to Medium by room test: flop, weaker recall."
+te-0033,,,రేసుగుర్రం,https://en.wikipedia.org/wiki/Race_Gurram,,
+te-0034,,,దేవర,https://en.wikipedia.org/wiki/Devara:_Part_1,,
+te-0035,,,అఖండ,https://en.wikipedia.org/wiki/Akhanda,,
+te-0036,2,,బృందావనం,https://en.wikipedia.org/wiki/Brindavanam_(2010_film),,"Moved Easy to Medium by room test: older (2010), weaker recall."
+te-0037,2,,వాల్తేరు వీరయ్య,https://en.wikipedia.org/wiki/Waltair_Veerayya,,Moved Easy to Medium by room test: mid-size hit.
+te-0038,,,మహర్షి,https://en.wikipedia.org/wiki/Maharshi_(2019_film),,
+te-0039,,,సీతమ్మ వాకిట్లో సిరిమల్లె చెట్టు,https://en.wikipedia.org/wiki/Seethamma_Vakitlo_Sirimalle_Chettu,,
+te-0040,2,,రాధేశ్యామ్,https://en.wikipedia.org/wiki/Radhe_Shyam,,"Moved Easy to Medium by room test: flop, weaker recall."
+te-0041,,,స్టాలిన్,https://en.wikipedia.org/wiki/Stalin_(2006_film),,
+te-0042,,,మర్యాద రామన్న,https://en.wikipedia.org/wiki/Maryada_Ramanna,,
+te-0043,2,,ఖైదీ నెంబర్ 150,https://en.wikipedia.org/wiki/Khaidi_No._150,,"Moved Easy to Medium by room test: remake, weaker recall."
+te-0044,,,అరవింద సమేత వీర రాఘవ,https://en.wikipedia.org/wiki/Aravinda_Sametha_Veera_Raghava,,
+te-0045,2,,ఎవడు,https://en.wikipedia.org/wiki/Yevadu,,Moved Easy to Medium by room test: weaker recall.
+te-0046,,,గబ్బర్ సింగ్,https://en.wikipedia.org/wiki/Gabbar_Singh_(film),,
+te-0047,2,,సన్నాఫ్ సత్యమూర్తి,https://en.wikipedia.org/wiki/S/O_Satyamurthy,,Moved Easy to Medium by room test: weaker recall.
+te-0048,2,,పరుగు,https://en.wikipedia.org/wiki/Parugu,,"Moved Easy to Medium by room test: older (2008), weaker recall."
+te-0049,,,ఉప్పెన,https://en.wikipedia.org/wiki/Uppena,,
+te-0050,2,,సింహా,https://en.wikipedia.org/wiki/Simha_(film),,"Moved Easy to Medium by room test: older (2010), weaker recall."
+te-0051,,,కిక్,https://en.wikipedia.org/wiki/Kick_(2009_film),,
+te-0052,2,,దేశముదురు,https://en.wikipedia.org/wiki/Desamuduru,,"Moved Easy to Medium by room test: older (2007), weaker recall."
