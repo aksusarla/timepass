@@ -104,7 +104,14 @@ export function searchTitles(
   exclude: ReadonlySet<string> = new Set(),
 ): { title: string; year: number }[] {
   const q = normalizeTitle(query);
-  if (q.length < 2) return [];
+  if (!q) return [];
+  // One character only shows exact titles (the Tamil film "I", "7"), not every title starting with it.
+  if (q.length < 2) {
+    const exact: number[] = [];
+    for (let i = 0; i < index.titles.length && exact.length < limit; i++)
+      if (!exclude.has(index.titles[i]) && index.keys[i].includes(q)) exact.push(i);
+    return exact.map((i) => ({ title: index.titles[i], year: index.years[i] }));
+  }
   const starts: number[] = [];
   const contains: number[] = [];
   for (let i = 0; i < index.titles.length && starts.length < limit; i++) {

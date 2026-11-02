@@ -56,3 +56,10 @@ test("search index ranks by fame, matches spellings and native script, hides exc
   assert.deepEqual(searchTitles("ra", idx, 5, new Set(["Rangasthalam"])), []);
   assert.deepEqual(searchTitles("r", idx), []);
 });
+
+test("a one-letter title like the Tamil film I can be found", async () => {
+  const { buildIndex, searchTitles } = await import("./game.ts");
+  const idx = buildIndex([["Indian", 1996], ["I", 2015], ["Ice", 2000]]);
+  assert.deepEqual(searchTitles("i", idx).map((r) => r.title), ["I"]);
+  assert.equal(searchTitles("in", idx)[0].title, "Indian");
+});
