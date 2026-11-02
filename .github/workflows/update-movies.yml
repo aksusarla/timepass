@@ -1,0 +1,32 @@
+# Applies rating and gap-filling edits from a CSV in supabase/updates/ to
+# existing movies (difficulty, family_safe, notes; fills empty wikidata_id,
+# title_native, source_url, aliases). Never inserts rows or changes storylines.
+# The next Content sync brings the changes to the site.
+name: Update movies
+
+on:
+  workflow_dispatch:
+    inputs:
+      file:
+        description: CSV in supabase/updates/
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://zbrzrbiegwqpajetdftk.supabase.co' }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      FILE: ${{ inputs.file }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Update
+        run: |
+          case "$FILE" in supabase/updates/*.csv) ;; *) echo "::error::Pick a CSV inside supabase/updates/"; exit 1;; esac
+          node scripts/supabase-update.mjs "$FILE"

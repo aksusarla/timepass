@@ -98,6 +98,14 @@ free code: `select next_movie_code('te');`
 **Security:** row-level security is on with no public access. People edit in
 the Supabase dashboard; only the sync job holds the secret key.
 
+**Bulk changes from files** (both run from GitHub → Actions, with the file path):
+- **Import movies** (`supabase/imports/*.csv`): adds new rows; codes that
+  already exist are skipped.
+- **Update movies** (`supabase/updates/*.csv`): edits existing rows by
+  `movie_code`. Changes only `difficulty`, `family_safe` and `notes` (appended),
+  and fills `wikidata_id`, `title_native`, `source_url`, `aliases` where they are
+  empty. Never touches storylines, facts or status; an empty cell means no change.
+
 ### One-time setup (owner, ~15 minutes)
 1. supabase.com → New project (region: **Mumbai, ap-south-1**). Save the database password.
 2. SQL Editor → New query → paste `supabase/schema.sql` → Run.
