@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ALL_LANGS, LANGS, findMovie, usePool, useSearch, type Lang, type Movie } from "@/content/movies";
 import type { SearchIndex } from "@/lib/game";
 import { isCorrectGuess } from "@/lib/game";
-import { pickByLevel, remember, type Level } from "@/lib/selection";
+import { START_LEVEL, nextLevel, pickNext, remember } from "@/lib/selection";
 import { useFilmLang } from "@/lib/lang";
 import { newRoomId, nowMs, secondsSince, track } from "@/lib/analytics";
 import { loadState, saveState, usePersistentState } from "@/lib/store";
@@ -29,8 +29,7 @@ type Pool = "te" | "ta" | "both";
 // mode: "teams" = host-led on one phone; "solo" = one player types answers.
 // Missing in older saves = teams (PRD v0.3 tab, CR-6).
 type Mode = "teams" | "solo";
-// level: Data Team difficulty mix (missing in older saves = "mix").
-type Setup = { pool: Pool; rounds: 5 | 10; teams: string[]; autoNext?: boolean; mode?: Mode; level?: Level };
+type Setup = { pool: Pool; rounds: 5 | 10; teams: string[]; autoNext?: boolean; mode?: Mode };
 type RoundResult = { movieId: string; winner: string | null; points: number };
 type Award = { winner: string | null; points: number };
 
@@ -41,6 +40,7 @@ type MGState = {
   deckIds: string[];
   results: RoundResult[];
   clue: number; // index into CLUES for the current round
+  level?: number; // difficulty of the next film (1-3); follows how the room is doing
   award: Award | null; // set once the current round is decided
   guesses?: string[]; // solo: wrong titles picked this round
   sound: boolean;
@@ -80,6 +80,7 @@ export default function MovieGuess() {
   const search = useSearch(solo && s.phase === "playing" ? langsOf(s.setup.pool) : []);
   const deck = pool ? s.deckIds.map((id) => findMovie(pool, id)).filter((m): m is Movie => !!m) : [];
   const poolFor = (langs: Lang[]) => (pool ?? []).filter((m) => langs.includes(m.lang));
+  const totalRounds = (setup: Setup) => Math.min(setup.rounds, poolFor(langsOf(setup.pool)).length);
   useWakeLock(s.phase === "playing");
   const players = solo ? [SOLO] : s.setup.teams;
 
@@ -96,15 +97,17 @@ export default function MovieGuess() {
   // fresh = started from the setup screen (new room); Play again keeps the room.
   function start(setup: Setup, fresh = true) {
     unlockAudio();
-    // Random films this device has not played yet (see src/lib/selection.ts).
+    // The first film is medium and unseen on this device; each next film is
+    // picked when a round ends, harder or easier by how it went (src/lib/selection.ts).
     const seen = loadState<string[]>(SEEN_KEY, []);
-    const deckIds = pickByLevel(poolFor(langsOf(setup.pool)), setup.rounds, setup.level ?? "mix", seen).map((m) => m.id);
+    const first = pickNext(poolFor(langsOf(setup.pool)), START_LEVEL, seen);
+    const deckIds = first ? [first.id] : [];
     saveState(SEEN_KEY, remember(seen, deckIds));
     const roomId = fresh || !s.roomId ? newRoomId() : s.roomId;
     const t = nowMs();
-    setS({ ...s, setup, phase: "playing", deckIds, results: [], clue: 0, award: null, guesses: [], roomId, gameStartedAt: t, roundStartedAt: t });
+    setS({ ...s, setup, phase: "playing", deckIds, level: START_LEVEL, results: [], clue: 0, award: null, guesses: [], roomId, gameStartedAt: t, roundStartedAt: t });
     if (fresh) track("room_created", ctx(setup, roomId));
-    track("game_started", { ...ctx(setup, roomId), player_count: playerCount(setup), rounds: deckIds.length });
+    track("game_started", { ...ctx(setup, roomId), player_count: playerCount(setup), rounds: totalRounds(setup) });
   }
 
   function ended(endedBy: "finished" | "quit", roundsPlayed: number, topScore: number) {
@@ -128,10 +131,7 @@ export default function MovieGuess() {
   if (s.phase === "setup" || deck.length === 0) {
     // The language comes from the site-wide choice (home page or the picker on this screen).
     const setup = { ...s.setup, pool: filmLang };
-    const films = poolFor(langsOf(filmLang));
-    const byLevel = { easy: 0, medium: 0, hard: 0 };
-    for (const m of films) byLevel[m.difficulty === 3 ? "hard" : m.difficulty === 2 ? "medium" : "easy"]++;
-    return <SetupScreen setup={setup} poolSize={films.length} byLevel={byLevel} setSetup={(next) => setS({ ...s, setup: next })} onStart={start} />;
+    return <SetupScreen setup={setup} poolSize={poolFor(langsOf(filmLang)).length} setSetup={(next) => setS({ ...s, setup: next })} onStart={start} />;
   }
 
   if (s.phase === "final") {
@@ -158,7 +158,7 @@ export default function MovieGuess() {
       key={movie.id}
       movie={movie}
       number={idx + 1}
-      total={deck.length}
+      total={totalRounds(s.setup)}
       teams={players}
       solo={solo}
       search={search}
@@ -187,7 +187,18 @@ export default function MovieGuess() {
       onUndo={() => setS({ ...s, award: null })}
       onNext={() => {
         const results = [...s.results, { movieId: movie.id, winner: s.award?.winner ?? null, points: s.award?.points ?? 0 }];
-        const done = results.length >= deck.length;
+        const done = results.length >= totalRounds(s.setup);
+        // Pick the next film now, from how this round went (older saves already hold their films).
+        const level = nextLevel(s.level ?? START_LEVEL, s.award?.points ?? 0);
+        let deckIds = s.deckIds;
+        if (!done && !deckIds[results.length]) {
+          const seen = loadState<string[]>(SEEN_KEY, []);
+          const next = pickNext(poolFor(langsOf(s.setup.pool)), level, seen, deckIds);
+          if (next) {
+            deckIds = [...deckIds, next.id];
+            saveState(SEEN_KEY, remember(seen, [next.id]));
+          }
+        }
         track("round_completed", {
           ...ctx(),
           round_number: results.length,
@@ -200,7 +211,7 @@ export default function MovieGuess() {
           const totals = players.map((p) => results.filter((r) => r.winner === p).reduce((a, r) => a + r.points, 0));
           ended("finished", results.length, Math.max(0, ...totals));
         }
-        setS({ ...s, results, clue: 0, award: null, guesses: [], phase: done ? "final" : "playing", roundStartedAt: nowMs() });
+        setS({ ...s, results, deckIds, level, clue: 0, award: null, guesses: [], phase: done || !deckIds[results.length] ? "final" : "playing", roundStartedAt: nowMs() });
       }}
       onEnd={() => {
         ended("quit", s.results.length, Math.max(0, ...scores.map((x) => x.score)));
@@ -215,13 +226,11 @@ export default function MovieGuess() {
 function SetupScreen({
   setup,
   poolSize,
-  byLevel,
   setSetup,
   onStart,
 }: {
   setup: Setup;
   poolSize: number;
-  byLevel: Record<"easy" | "medium" | "hard", number>;
   setSetup: (s: Setup) => void;
   onStart: (s: Setup) => void;
 }) {
@@ -244,28 +253,6 @@ function SetupScreen({
       <div className="stack">
         <span className="label">Films in · {poolSize} to guess</span>
         <LangPicker value={setup.pool} />
-      </div>
-
-      <div className="stack">
-        <span className="label">How hard</span>
-        <Seg<Level>
-          label="How hard"
-          value={setup.level ?? "mix"}
-          onChange={(level) => setSetup({ ...setup, level })}
-          options={[
-            { value: "easy", label: "Easy" },
-            { value: "mix", label: "Mixed" },
-            { value: "hard", label: "Hard" },
-          ]}
-        />
-        <p className="muted small">
-          {(setup.level ?? "mix") === "mix"
-            ? "Starts with hits, ends with tougher films."
-            : setup.level === "hard"
-              ? `Lesser-known films first${byLevel.hard < 5 ? " (more are being added)" : ""}.`
-              : "Big hits everyone knows."}{" "}
-          {byLevel.easy} easy · {byLevel.medium} medium · {byLevel.hard} hard
-        </p>
       </div>
 
       <div className="stack">
@@ -308,7 +295,7 @@ function SetupScreen({
           Start game
         </button>
         <p className="summary">
-          {solo ? "Solo" : `${setup.teams.length} teams`} · {rounds} rounds · {poolLabel(setup.pool)} films · {({ easy: "easy", mix: "mixed", hard: "hard", medium: "medium" } as const)[setup.level ?? "mix"]}
+          {solo ? "Solo" : `${setup.teams.length} teams`} · {rounds} rounds · {poolLabel(setup.pool)} films
         </p>
       </div>
 

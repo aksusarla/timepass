@@ -33,21 +33,30 @@ test("history drops repeats and is capped", () => {
   assert.equal(remember([], Array.from({ length: 10 }, (_, i) => `${i}`), 4).length, 4);
 });
 
-import { pickByLevel } from "./selection.ts";
+import { nextLevel, pickNext } from "./selection.ts";
 const rated = [
-  ...Array.from({ length: 10 }, (_, i) => ({ id: `e${i}`, difficulty: 1 })),
-  ...Array.from({ length: 10 }, (_, i) => ({ id: `m${i}`, difficulty: 2 })),
-  ...Array.from({ length: 3 }, (_, i) => ({ id: `h${i}`, difficulty: 3 })),
+  ...Array.from({ length: 4 }, (_, i) => ({ id: `e${i}`, difficulty: 1 })),
+  ...Array.from({ length: 4 }, (_, i) => ({ id: `m${i}`, difficulty: 2 })),
+  ...Array.from({ length: 2 }, (_, i) => ({ id: `h${i}`, difficulty: 3 })),
 ];
 
-test("hard games pick hard films first, then the closest ratings", () => {
-  const deck = pickByLevel(rated, 5, "hard");
-  assert.equal(deck.filter((m) => m.difficulty === 3).length, 3);
-  assert.equal(deck.filter((m) => m.difficulty === 2).length, 2, "medium fills the gap before easy");
+test("difficulty follows the room: early guesses go harder, misses go easier", () => {
+  assert.equal(nextLevel(2, 4), 3);
+  assert.equal(nextLevel(2, 3), 3);
+  assert.equal(nextLevel(2, 2), 2);
+  assert.equal(nextLevel(2, 0), 1);
+  assert.equal(nextLevel(3, 4), 3, "never above hard");
+  assert.equal(nextLevel(1, 0), 1, "never below easy");
 });
 
-test("mix ramps from easy to hard", () => {
-  const deck = pickByLevel(rated, 10, "mix").map((m) => m.difficulty);
-  assert.deepEqual(deck, [1, 1, 1, 1, 2, 2, 2, 2, 3, 3]);
-  assert.equal(new Set(pickByLevel(rated, 10, "mix").map((m) => m.id)).size, 10, "no film twice");
+test("next film is at the asked level, unseen, and never repeats in a game", () => {
+  assert.equal(pickNext(rated, 3, [])!.difficulty, 3);
+  // Both hard films seen: the closest level (medium) is used, not a repeat.
+  const m = pickNext(rated, 3, ["h0", "h1"])!;
+  assert.equal(m.difficulty, 2);
+  // Whole bank seen: the one seen longest ago at that level comes back.
+  const all = rated.map((r) => r.id);
+  assert.equal(pickNext(rated, 3, ["h1", ...all.filter((x) => x !== "h1")])!.id, "h1");
+  // Films already in this game are never picked again.
+  assert.equal(pickNext(rated, 1, [], ["e0", "e1", "e2", "e3"])!.difficulty, 2);
 });

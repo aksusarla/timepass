@@ -11,12 +11,68 @@ import { useFilmLang } from "@/lib/lang";
 import { MG_KEY, SEEN_KEY } from "./MovieGuess";
 import { IM_KEY } from "./Imposter";
 
+/** Scores of a saved Movie Guess game, for the Continue banner. */
+function savedScores(raw: string | null): string | null {
+  try {
+    const s = JSON.parse(raw ?? "");
+    const names: string[] = s.setup?.mode === "solo" ? ["You"] : (s.setup?.teams ?? []);
+    const pts = (n: string) => (s.results ?? []).filter((r: { winner: string | null }) => r.winner === n || (n === "You" && r.winner)).reduce((a: number, r: { points: number }) => a + r.points, 0);
+    return names.map((n) => `${n} ${pts(n)}`).join(" · ") || null;
+  } catch {
+    return null;
+  }
+}
+
+/** The first thing on the home page when a game was left unfinished. */
+function ContinueBanner({ mg, im, mgRaw }: { mg: string | null; im: string | null; mgRaw: string | null }) {
+  const [hidden, setHidden] = useState<string[]>([]);
+  type Saved = { key: string; route: "movie-guess" | "imposter"; name: string; where: string; extra: string | null };
+  const all: (Saved | null)[] = [
+    mg ? { key: MG_KEY, route: "movie-guess", name: "Movie Guess", where: mg, extra: savedScores(mgRaw) } : null,
+    im ? { key: IM_KEY, route: "imposter", name: "Imposter Movie", where: im, extra: null } : null,
+  ];
+  const games = all.filter((g): g is Saved => !!g && !hidden.includes(g.key));
+  if (games.length === 0) return null;
+  return (
+    <section className="continue" aria-label="Unfinished games">
+      {games.map((g) => (
+        <div key={g.key} className="continue-card">
+          <div>
+            <span className="label">Continue your game</span>
+            <h3>{g.name}</h3>
+            <p className="muted">
+              {g.where}
+              {g.extra ? ` · ${g.extra}` : ""}
+            </p>
+          </div>
+          <div className="row">
+            <a className="btn" href={href(g.route)} onClick={() => track("game_selected", { game: g.route === "imposter" ? "imposter" : "movie_guess", resumed: true })}>
+              Continue <Arrow />
+            </a>
+            <button
+              type="button"
+              className="btn ghost"
+              onClick={() => {
+                saveState(g.key, null); // a new game starts fresh next time
+                setHidden((h) => [...h, g.key]);
+              }}
+            >
+              End it
+            </button>
+          </div>
+        </div>
+      ))}
+    </section>
+  );
+}
+
 function resumeLabel(key: string, raw: string | null): string | null {
   if (!raw) return null;
   try {
     const s = JSON.parse(raw);
     if (key === MG_KEY && s.phase === "playing" && s.deckIds?.length) {
-      return `Round ${Math.min((s.results?.length ?? 0) + 1, s.deckIds.length)} of ${s.deckIds.length}`;
+      const total = s.setup?.rounds ?? s.deckIds.length;
+      return `Round ${Math.min((s.results?.length ?? 0) + 1, total)} of ${total}`;
     }
     if (key === IM_KEY && s.phase?.kind && s.phase.kind !== "setup") return `Round ${s.roundNo}`;
   } catch {}
@@ -29,7 +85,8 @@ export default function Home() {
   const lang: Lang = filmLang === "ta" ? "ta" : "te";
   const langName = filmLang === "both" ? "Telugu + Tamil" : (LANGS.find((l) => l.code === filmLang)?.name ?? "");
   const films = filmLang === "both" ? LANGS.reduce((n, l) => n + (COUNTS[l.code]?.puzzles ?? 0), 0) : (COUNTS[filmLang]?.puzzles ?? 0);
-  const mgResume = resumeLabel(MG_KEY, useSavedGame(MG_KEY));
+  const mgRaw = useSavedGame(MG_KEY);
+  const mgResume = resumeLabel(MG_KEY, mgRaw);
   const imResume = resumeLabel(IM_KEY, useSavedGame(IM_KEY));
   // The language chips in the hero also choose the film in "Try one".
 
@@ -43,6 +100,7 @@ export default function Home() {
 
   return (
     <div className="home">
+      <ContinueBanner mg={mgResume} im={imResume} mgRaw={mgRaw} />
       <section className="hero">
         <div className="hero-copy rise">
           <h1>
