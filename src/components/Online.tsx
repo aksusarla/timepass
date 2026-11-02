@@ -7,9 +7,10 @@ import { ALL_LANGS, LANGS, COUNTS, useSearch } from "@/content/movies";
 import { CLUES, CLUE_MS, type Pool, type RoomView } from "@/lib/rooms";
 import { CODE_RE, codeFromHash, createRoom, onlineEnabled, roomHash, roomLink, useRoom, useSecondsLeft } from "@/lib/online";
 import { loadState, saveState } from "@/lib/store";
+import { setFilmLang, useFilmLang } from "@/lib/lang";
 import { track } from "@/lib/analytics";
 import { buzz, useWakeLock } from "@/lib/device";
-import { Board, Countdown, HowToPlay, NameList, Seg, TitleInput, Words } from "./ui";
+import { LangPicker, Board, Countdown, HowToPlay, NameList, Seg, TitleInput, Words } from "./ui";
 
 function subscribeHash(cb: () => void) {
   window.addEventListener("hashchange", cb);
@@ -109,6 +110,7 @@ function Entry() {
 
 function RoomScreen({ code }: { code: string }) {
   const { view, status, error, send, offset } = useRoom(code);
+  const filmLang = useFilmLang();
   useWakeLock(!!view && view.phase !== "lobby" && view.phase !== "over");
 
   if (status === "gone")
@@ -137,7 +139,15 @@ function RoomScreen({ code }: { code: string }) {
         </div>
       )}
       {!view.me ? (
-        <JoinForm code={code} view={view} onJoin={(name) => send({ type: "join", name })} />
+        <JoinForm
+          code={code}
+          view={view}
+          onJoin={(name) => {
+            send({ type: "join", name });
+            // The first player becomes host: start the room in their chosen language.
+            if (view.players.length === 0) send({ type: "configure", pool: filmLang });
+          }}
+        />
       ) : view.phase === "lobby" ? (
         <Lobby view={view} send={send} />
       ) : view.phase === "clue" ? (
@@ -244,6 +254,20 @@ function Lobby({ view, send }: { view: RoomView; send: Send }) {
         <p className="muted">{me.isHost ? "You're the host. Start when everyone's in." : "Waiting for the host to start."}</p>
       </div>
       <Invite code={view.code} />
+      <div className="stack">
+        <span className="label">Films in{me.isHost ? "" : " · the host picks"}</span>
+        {me.isHost ? (
+          <LangPicker
+            value={view.pool}
+            onChange={(pool) => {
+              setFilmLang(pool);
+              send({ type: "configure", pool });
+            }}
+          />
+        ) : (
+          <p className="lead">{view.pool === "both" ? "Telugu and Tamil" : LANGS.find((l) => l.code === view.pool)?.name}</p>
+        )}
+      </div>
       <div className="teams">
         {view.teams.map((t, i) => (
           <div key={i} className={`panel stack team${me.team === i ? " mine" : ""}`}>
@@ -284,18 +308,6 @@ function Lobby({ view, send }: { view: RoomView; send: Send }) {
             <div className="stack">
               <span className="label">Teams · tap a name to rename</span>
               <NameList names={view.teams.map((t) => t.name)} setNames={(teams) => send({ type: "configure", teams })} min={2} max={6} noun="a team" />
-            </div>
-            <div className="stack">
-              <span className="label">Films from</span>
-              <Seg<Pool>
-                label="Movie pool"
-                value={view.pool}
-                onChange={(pool) => send({ type: "configure", pool })}
-                options={[
-                  ...LANGS.map((l) => ({ value: l.code as Pool, label: `${l.name} · ${counts(l.code as Pool)}` })),
-                  { value: "both" as Pool, label: `Both · ${counts("both")}` },
-                ]}
-              />
             </div>
             <div className="stack">
               <span className="label">Rounds</span>

@@ -6,7 +6,8 @@ import { onlineEnabled } from "@/lib/online";
 import { landingParams, track } from "@/lib/analytics";
 import { loadState, saveState } from "@/lib/store";
 import { remember } from "@/lib/selection";
-import { Arrow, href, useSavedGame } from "./ui";
+import { Arrow, LangPicker, href, useSavedGame } from "./ui";
+import { useFilmLang } from "@/lib/lang";
 import { MG_KEY, SEEN_KEY } from "./MovieGuess";
 import { IM_KEY } from "./Imposter";
 
@@ -23,11 +24,14 @@ function resumeLabel(key: string, raw: string | null): string | null {
 }
 
 export default function Home() {
-  const totalFilms = LANGS.reduce((n, l) => n + (COUNTS[l.code]?.puzzles ?? 0), 0);
+  // The chosen language applies to every game, not just "Try one" (remembered on this phone).
+  const filmLang = useFilmLang();
+  const lang: Lang = filmLang === "ta" ? "ta" : "te";
+  const langName = filmLang === "both" ? "Telugu + Tamil" : (LANGS.find((l) => l.code === filmLang)?.name ?? "");
+  const films = filmLang === "both" ? LANGS.reduce((n, l) => n + (COUNTS[l.code]?.puzzles ?? 0), 0) : (COUNTS[filmLang]?.puzzles ?? 0);
   const mgResume = resumeLabel(MG_KEY, useSavedGame(MG_KEY));
   const imResume = resumeLabel(IM_KEY, useSavedGame(IM_KEY));
   // The language chips in the hero also choose the film in "Try one".
-  const [lang, setLang] = useState<Lang>(LANGS[0].code);
 
   useEffect(() => {
     const { ref, utm_source } = landingParams();
@@ -49,13 +53,9 @@ export default function Home() {
             Original games built on Telugu and Tamil cinema. One phone runs the game, so grandparents and kids can play
             along.
           </p>
-          <div className="langs" role="group" aria-label="Film language for Try one">
-            {LANGS.map((l) => (
-              <button key={l.code} type="button" aria-pressed={lang === l.code} onClick={() => setLang(l.code)}>
-                <span className="native">{l.native}</span> {l.name}
-              </button>
-            ))}
-            <span className="more-soon">More languages soon</span>
+          <div className="lang-row">
+            <span className="label">Play in</span>
+            <LangPicker value={filmLang} label="Film language for every game" />
           </div>
         </div>
         <Taster lang={lang} />
@@ -66,9 +66,9 @@ export default function Home() {
           <GameCard
             title="Movie Guess"
             text="Guess the film from clues that get easier: the story, then the director, heroine and hero. Guess early, score more."
-            tags={["Solo or 2–6 teams", "8–15 min", `${totalFilms} films`]}
+            tags={["Solo or 2–6 teams", "8–15 min", `${films} ${langName} films`]}
             route="movie-guess"
-            cta={mgResume ? `Resume, round ${mgResume.replace("Round ", "")}` : "Play Movie Guess"}
+            cta={mgResume ? `Resume, round ${mgResume.replace("Round ", "")}` : `Play Movie Guess in ${langName}`}
             inProgress={!!mgResume}
             onPick={() => track("game_selected", { game: "movie_guess", resumed: !!mgResume })}
           />
@@ -77,7 +77,7 @@ export default function Home() {
             text="Everyone secretly picks a film. One player ends up seeing the wrong one, and they might not even know it. Give clues, then catch them."
             tags={["4–12 players", "5 min a round", "Pass the phone"]}
             route="imposter"
-            cta={imResume ? `Resume, round ${imResume.replace("Round ", "")}` : "Play Imposter Movie"}
+            cta={imResume ? `Resume, round ${imResume.replace("Round ", "")}` : `Play Imposter in ${langName}`}
             inProgress={!!imResume}
             onPick={() => track("game_selected", { game: "imposter", resumed: !!imResume })}
           />

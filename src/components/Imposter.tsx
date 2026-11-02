@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { LANGS, useSearch, type Lang } from "@/content/movies";
+import { useSearch, type Lang } from "@/content/movies";
+import { useFilmLang } from "@/lib/lang";
 import { normalizeTitle, pickImposterRound, shuffle } from "@/lib/game";
 import { newRoomId, nowMs, secondsSince, track } from "@/lib/analytics";
 import { usePersistentState } from "@/lib/store";
 import { unlockAudio, useWakeLock } from "@/lib/device";
-import { Board, GameTools, HoldReveal, HowToPlay, NameList, Seg, ShareCard, TitleInput, Words } from "./ui";
+import { LangPicker, Board, GameTools, HoldReveal, HowToPlay, NameList, Seg, ShareCard, TitleInput, Words } from "./ui";
 
 // PRD section 8, played pass-and-play on one phone. The online version will
 // hold the real movie and the imposter on the server instead.
@@ -44,7 +45,10 @@ const INITIAL: IMState = { players: [], pool: "te", scores: {}, phase: { kind: "
 
 export default function Imposter() {
   const [s, setS] = usePersistentState<IMState>(IM_KEY, INITIAL);
-  const { players, pool, scores, phase, round, roundNo, note } = s;
+  const { players, scores, phase, round, roundNo, note } = s;
+  // Before a game, the language follows the site-wide choice; once playing, the game keeps its own.
+  const filmLang = useFilmLang();
+  const pool: Pool = phase.kind === "setup" ? filmLang : s.pool;
   const set = (patch: Partial<IMState>) => setS({ ...s, ...patch });
   useWakeLock(phase.kind !== "setup");
 
@@ -78,6 +82,7 @@ export default function Imposter() {
     const t = nowMs();
     setS({
       ...s,
+      pool,
       note: "",
       roundNo: roundNo + 1,
       phase: { kind: "submit", i: 0, open: false, subs: [] },
@@ -135,6 +140,11 @@ export default function Imposter() {
           <p className="muted">Pass one phone around. Everyone secretly picks a film, then one player ends up seeing a different one.</p>
         </div>
 
+        <div className="stack">
+          <span className="label">Films in</span>
+          <LangPicker value={filmLang} />
+        </div>
+
         <HowToPlay
           id="imposter"
           title="How to play"
@@ -165,15 +175,6 @@ export default function Imposter() {
         <details className="settings">
           <summary>Settings</summary>
           <div className="stack" style={{ gap: 20, paddingTop: 16 }}>
-            <div className="stack">
-              <span className="label">Suggest films from</span>
-              <Seg<Pool>
-                label="Movie pool"
-                value={pool}
-                onChange={(p) => set({ pool: p })}
-                options={[...LANGS.map((l) => ({ value: l.code as Pool, label: l.name })), { value: "both", label: "Both" }]}
-              />
-            </div>
             <div className="stack">
               <span className="label">Mode</span>
               <Seg label="Mode" value="room" onChange={() => {}} options={[{ value: "room", label: "Pass & play" }, { value: "online", label: "Online · coming soon", disabled: true }]} />

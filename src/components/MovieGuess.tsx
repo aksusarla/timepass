@@ -1,14 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ALL_LANGS, COUNTS, LANGS, findMovie, usePool, useSearch, type Lang, type Movie } from "@/content/movies";
+import { ALL_LANGS, LANGS, findMovie, usePool, useSearch, type Lang, type Movie } from "@/content/movies";
 import type { SearchIndex } from "@/lib/game";
 import { isCorrectGuess } from "@/lib/game";
 import { pickDeck, remember } from "@/lib/selection";
+import { useFilmLang } from "@/lib/lang";
 import { newRoomId, nowMs, secondsSince, track } from "@/lib/analytics";
 import { loadState, saveState, usePersistentState } from "@/lib/store";
 import { beep, buzz, unlockAudio, useWakeLock } from "@/lib/device";
-import { Board, Countdown, GameTools, HowToPlay, NameList, Seg, ShareCard, TitleInput, Words, speak, stopSpeaking } from "./ui";
+import { LangPicker, Board, Countdown, GameTools, HowToPlay, NameList, Seg, ShareCard, TitleInput, Words, speak, stopSpeaking } from "./ui";
 
 // PRD section 7 (CEO change, 2 Nov): storyline -> director -> heroine -> hero -> reveal.
 // The hero goes last because he gives the film away fastest.
@@ -70,6 +71,7 @@ const poolLabel = (p: Pool) => (p === "both" ? "Telugu + Tamil" : LANGS.find((l)
 
 export default function MovieGuess() {
   const [s, setS] = usePersistentState<MGState>(MG_KEY, INITIAL);
+  const filmLang = useFilmLang();
   // Puzzle files are tiny (a few KB per language): load them all up front.
   const pool = usePool(ALL_LANGS);
   const solo = s.setup.mode === "solo";
@@ -123,7 +125,9 @@ export default function MovieGuess() {
   if (!pool) return <div className="loading" role="status">Loading films…</div>;
 
   if (s.phase === "setup" || deck.length === 0) {
-    return <SetupScreen setup={s.setup} poolSize={poolFor(langsOf(s.setup.pool)).length} setSetup={(setup) => setS({ ...s, setup })} onStart={start} />;
+    // The language comes from the site-wide choice (home page or the picker on this screen).
+    const setup = { ...s.setup, pool: filmLang };
+    return <SetupScreen setup={setup} poolSize={poolFor(langsOf(filmLang)).length} setSetup={(next) => setS({ ...s, setup: next })} onStart={start} />;
   }
 
   if (s.phase === "final") {
@@ -232,6 +236,11 @@ function SetupScreen({
       </div>
 
       <div className="stack">
+        <span className="label">Films in · {poolSize} to guess</span>
+        <LangPicker value={setup.pool} />
+      </div>
+
+      <div className="stack">
         <span className="label">Play as</span>
         <Seg<Mode>
           label="Play as"
@@ -284,18 +293,6 @@ function SetupScreen({
               <NameList names={setup.teams} setNames={(teams) => setSetup({ ...setup, teams })} min={2} max={6} noun="a team" />
             </div>
           )}
-          <div className="stack">
-            <span className="label">Films from · {poolSize} films to guess</span>
-            <Seg<Pool>
-              label="Movie pool"
-              value={setup.pool}
-              onChange={(pool) => setSetup({ ...setup, pool })}
-              options={[
-                ...LANGS.map((l) => ({ value: l.code as Pool, label: `${l.name} · ${COUNTS[l.code]?.puzzles ?? 0}` })),
-                { value: "both", label: `Both · ${LANGS.reduce((n, l) => n + (COUNTS[l.code]?.puzzles ?? 0), 0)}` },
-              ]}
-            />
-          </div>
           <div className="stack">
             <span className="label">Rounds</span>
             <Seg<5 | 10>
