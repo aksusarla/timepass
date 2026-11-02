@@ -9,7 +9,7 @@ embarrassing; prefer the simplest thing that works.
 ## Stack
 - Next.js (App Router, TypeScript), static export (`output: "export"`) to `out/`
 - One page, hash routes: `#movie-guess`, `#imposter`
-- Plain CSS in `src/app/globals.css`, copied from the portfolio's design tokens
+- Plain CSS in `src/app/globals.css`; design tokens in `src/app/tokens.css` (from Figma)
 - Hosted on GitHub Pages via `.github/workflows/pages.yml` (BASE_PATH = /repo-name)
 - Online mode: Cloudflare Worker + Durable Objects in `rooms/` (deployed by `.github/workflows/rooms.yml`);
   answers and secrets stay on the server until reveal (PRD 6, 10).
@@ -33,7 +33,9 @@ embarrassing; prefer the simplest thing that works.
 
 ## Rules
 - Mobile first: design for a 360-400px phone screen, big tap targets.
-- Match the portfolio look: monochrome tokens, Inter, indexed labels, pill buttons.
+- Match the Figma design (file rVDf1rqJUyPQrYy5llmwZI, v0.7): near-black and cream with a lime accent,
+  Space Grotesk headings, Inter body, IBM Plex Mono labels, 6-10px radii. All values live in
+  `src/app/tokens.css`; light mode is derived from the Figma dark values. No imagery we don't own.
 - Hidden information (imposter, real movie) must live server-side once online.
 - Content changes go through the Google Sheet, not code. Never put movie data in components.
 - Copyright-safe content only: our own plot summaries, emoji, and plain facts

@@ -29,28 +29,68 @@ export const href = (r: Route) => (r === "home" ? "#" : `#${r}`);
 
 export function Bar({ route }: { route: Route | null }) {
   // "Movie " hides on small phones so the menu fits beside the Beta tag.
-  const links: [Route, string, string][] = [
-    ["movie-guess", "Movie ", "Guess"],
-    ["imposter", "", "Imposter"],
+  const links: [Route, string, string, string][] = [
+    ["movie-guess", "Movie ", "Guess", ""],
+    ["imposter", "", "Imposter", " Movie"],
   ];
   return (
     <header className="bar">
       <div className="in">
-        <a className="wordmark" href={href("home")}>
-          timepass<span>.</span>
-        </a>
-        <span className="beta" title="Beta: still being tested. Expect changes.">Beta</span>
+        <Wordmark />
         <nav aria-label="Games">
-          {links.map(([r, pre, label]) => (
+          {links.map(([r, pre, label, post]) => (
             <a key={r} href={href(r)} className={route === r ? "on" : undefined}>
               {pre && <span className="full">{pre}</span>}
               {label}
+              {post && <span className="full">{post}</span>}
             </a>
           ))}
         </nav>
-        <ThemeToggle />
+        <div className="bar-end">
+          <ThemeToggle />
+          <a className="btn sm play" href={href("movie-guess")}>
+            Let&apos;s play <PlayIcon />
+          </a>
+        </div>
       </div>
     </header>
+  );
+}
+
+/** Brand mark: a split frame on the accent square. */
+export function Mark() {
+  return (
+    <svg className="mark" viewBox="0 0 26 26" width="26" height="26" aria-hidden="true">
+      <rect width="26" height="26" rx="4" fill="var(--accent)" />
+      <path d="M11 5H5v6M15 5h6v6M5 15v6h6M21 15v6h-6M14.5 10.5l-3 4" fill="none" stroke="var(--on-accent)" strokeWidth="2" />
+    </svg>
+  );
+}
+
+export function Wordmark({ asLink = true }: { asLink?: boolean }) {
+  const inner = (
+    <>
+      <Mark />
+      <span className="word">timepass</span>
+      <span className="beta" title="Beta: still being tested. Expect changes.">
+        Beta
+      </span>
+    </>
+  );
+  return asLink ? (
+    <a className="wordmark" href={href("home")} aria-label="Timepass home">
+      {inner}
+    </a>
+  ) : (
+    <span className="wordmark">{inner}</span>
+  );
+}
+
+function PlayIcon() {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M4.5 3v10l8-5-8-5Z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+    </svg>
   );
 }
 
