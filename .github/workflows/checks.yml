@@ -22,6 +22,8 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run lint
+      - name: Room server type check
+        run: node scripts/build-content.mjs --quiet && cd rooms && npm ci && npx tsc --noEmit -p .
       - name: Build (also validates the movie bank)
         run: npm run build
         env:

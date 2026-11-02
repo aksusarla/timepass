@@ -11,8 +11,8 @@ embarrassing; prefer the simplest thing that works.
 - One page, hash routes: `#movie-guess`, `#imposter`
 - Plain CSS in `src/app/globals.css`, copied from the portfolio's design tokens
 - Hosted on GitHub Pages via `.github/workflows/pages.yml` (BASE_PATH = /repo-name)
-- No backend yet. Online mode needs a real-time room service that holds secrets
-  server-side (PRD 6, 8); the static front end will talk to it.
+- Online mode: Cloudflare Worker + Durable Objects in `rooms/` (deployed by `.github/workflows/rooms.yml`);
+  answers and secrets stay on the server until reveal (PRD 6, 10).
 - Analytics only through `track()` in `src/lib/analytics.ts`; event names and
   properties follow the project doc "timepass-analytics-posthog-tracking-plan".
   Never rename a live event; never send names, nicknames or typed titles.
@@ -24,6 +24,10 @@ embarrassing; prefer the simplest thing that works.
 - `src/content/movies.ts` - loaders and hooks (`usePool`, `useSearch`); no data in code
 - `DATA.md` - data architecture and Data Team workflow
 - `src/lib/game.ts` - title matching, suggestions, imposter pick (pure, tested)
+- `src/lib/selection.ts` - which films a game gets (random, no repeats per device); plug-in point for selection algorithms
+- `src/lib/rooms.ts` - online room + Movie Guess (Teams) rules engine (pure, tested; bundled into the room server)
+- `src/lib/online.ts`, `src/components/Online.tsx` - online client (#online, #room=CODE); hidden unless NEXT_PUBLIC_ROOMS_URL is set
+- `rooms/` - Cloudflare Worker + Durable Object room server (own package; `cd rooms && npm run dev` on :8787)
 - `src/components/MovieGuess.tsx`, `Imposter.tsx`, `Home.tsx`, `ui.tsx`
 - `scripts/inline-build.mjs` - single-file preview bundle
 

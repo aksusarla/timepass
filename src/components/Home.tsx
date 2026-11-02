@@ -2,6 +2,7 @@
 
 import { COUNTS, LANGS, prefetch, usePool, type Lang, type Movie } from "@/content/movies";
 import { useEffect, useState } from "react";
+import { onlineEnabled } from "@/lib/online";
 import { landingParams, track } from "@/lib/analytics";
 import { loadState, saveState } from "@/lib/store";
 import { remember } from "@/lib/selection";
@@ -123,10 +124,20 @@ export default function Home() {
             <h3>Rail Gaadi</h3>
             <p>Link each film to the last through a shared star or director, before the timer runs out.</p>
           </div>
-          <div>
-            <h3>Play from every phone</h3>
-            <p>Online rooms, so everyone joins from their own phone, wherever they are. For now, one phone runs the game.</p>
-          </div>
+          {onlineEnabled ? (
+            <a href="#online" onClick={() => track("game_selected", { game: "movie_guess", mode: "online" })}>
+              <h3>Play from every phone</h3>
+              <p>Movie Guess online, in teams: everyone joins from their own phone with a room code. In beta.</p>
+              <span className="btn">
+                Play online <Arrow />
+              </span>
+            </a>
+          ) : (
+            <div>
+              <h3>Play from every phone</h3>
+              <p>Online rooms, so everyone joins from their own phone, wherever they are. For now, one phone runs the game.</p>
+            </div>
+          )}
         </div>
       </section>
     </div>
