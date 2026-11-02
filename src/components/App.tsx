@@ -22,12 +22,14 @@ export default function App() {
       <main className="wrap">
         {route === "movie-guess" ? <MovieGuess /> : route === "imposter" ? <Imposter /> : route === "online" ? <Online /> : <Home />}
         <footer>
-          <span>Timepass Beta · v0.5</span>
-          <span>No clips, stills or songs. Our words, our voice.</span>
-          <span className="privacy">
+          <div className="foot-row">
+            <span>Timepass Beta · v0.6</span>
+            <span>No clips, stills or songs. Our words, our voice.</span>
+          </div>
+          <p className="privacy">
             Privacy: we count anonymous usage (which games are played, how far) to improve Timepass. No names, numbers or
             personal data are collected, and nothing is ever sold.
-          </span>
+          </p>
         </footer>
       </main>
     </>
