@@ -2,43 +2,78 @@
    TIMEPASS DESIGN TOKENS
    The whole look of the site comes from this file: colours, fonts,
    text sizes and motion. Change values here and every screen follows.
+   Source: the Figma homepage (file rVDf1rqJUyPQrYy5llmwZI, v0.7).
+   Dark values are the Figma values; light values are derived from them.
    Rules:
    - Every colour needs a light value (first block) AND a dark value
      (both dark blocks below, kept identical).
    - Body text must stay readable: aim for 4.5:1 contrast with --bg.
+   - The accent (lime) is a fill colour. Text on it uses --on-accent.
+     For accent-coloured text use --accent-ink (readable in both modes).
    - Fonts must cover Telugu and Tamil (and Devanagari when Hindi lands).
      Load new fonts in src/app/layout.tsx (Google Fonts link).
    ============================================================ */
 
 :root {
   /* Colours, light mode */
-  --bg: #ffffff;
-  --fg: #0a0a0a;
-  --muted: #6b6b6b;
-  --faint: #a3a3a3;
-  --ghost: #cfcfcf;
-  --line: #e4e4e4;
-  --line-strong: #0a0a0a;
-  --chip: #f2f2f2;
-  --accent: #1fa463;
+  --bg: #f7f7f2;
+  --surface: #ffffff;
+  --surface-2: #efefe8;
+  --fg: #101110;
+  --muted: #4b5046;
+  --faint: #6b7064;
+  --ghost: #c9cbc1;
+  --line: #dcddd3;
+  --rule: #e6e6de;
+  --line-strong: #101110;
+  --chip: #ebebe3;
+  --accent: #d5fc51;
+  --on-accent: #161c0b;
+  --accent-ink: #4b6600;
+  --accent-soft: rgba(132, 170, 0, 0.12);
+  --accent-edge: rgba(100, 130, 0, 0.35);
   --danger: #c2362b;
+
+  /* Game cards: the contrast block on the home page (dark on light) */
+  --card-bg: #101110;
+  --card-fg: #f5f4eb;
+  --card-muted: #a5a99d;
+  --card-chip: #1e211c;
+  --card-chip-fg: #a5a99d;
+  --card-line: #262923;
+  --card-btn: #f5f4eb;
+  --card-btn-fg: #101110;
+
+  /* Type */
   --font: "Inter", "Noto Sans Telugu", "Noto Sans Tamil", ui-sans-serif, system-ui, -apple-system,
     "Segoe UI", Roboto, Arial, sans-serif;
+  --font-display: "Space Grotesk", "Noto Sans Telugu", "Noto Sans Tamil", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   --step-0: 0.8125rem;
   --step-1: 0.9375rem;
   --step-2: 1.125rem;
   --step-3: 1.5rem;
   --step-4: clamp(2rem, 5vw, 3.25rem);
   --step-5: clamp(2.75rem, 11vw, 6.5rem);
+  --radius: 10px;
+  --radius-sm: 6px;
   --ease: cubic-bezier(0.2, 0.7, 0.1, 1);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0a0a0a; --fg: #f5f5f5; --muted: #9a9a9a; --faint: #5c5c5c; --ghost: #333333;
-    --line: #242424; --line-strong: #f5f5f5; --chip: #171717; --danger: #ef6b5f; color-scheme: dark;
+    --bg: #101110; --surface: #1a1c19; --surface-2: #1e211c; --fg: #f5f4eb; --muted: #a5a99d; --faint: #73796d;
+    --ghost: #33362f; --line: #33362f; --rule: #1e211c; --line-strong: #4a4e44; --chip: #262923;
+    --accent-ink: #d5fc51; --accent-soft: rgba(213, 252, 81, 0.12); --accent-edge: rgba(213, 252, 81, 0.3); --danger: #ef6b5f;
+    --card-bg: #f5f4eb; --card-fg: #101110; --card-muted: #4b5046; --card-chip: #e5e4dc; --card-chip-fg: #6b7064;
+    --card-line: #d5d4cb; --card-btn: #101110; --card-btn-fg: #f5f4eb;
+    color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #0a0a0a; --fg: #f5f5f5; --muted: #9a9a9a; --faint: #5c5c5c; --ghost: #333333;
-  --line: #242424; --line-strong: #f5f5f5; --chip: #171717; --danger: #ef6b5f; color-scheme: dark;
+  --bg: #101110; --surface: #1a1c19; --surface-2: #1e211c; --fg: #f5f4eb; --muted: #a5a99d; --faint: #73796d;
+  --ghost: #33362f; --line: #33362f; --rule: #1e211c; --line-strong: #4a4e44; --chip: #262923;
+  --accent-ink: #d5fc51; --accent-soft: rgba(213, 252, 81, 0.12); --accent-edge: rgba(213, 252, 81, 0.3); --danger: #ef6b5f;
+  --card-bg: #f5f4eb; --card-fg: #101110; --card-muted: #4b5046; --card-chip: #e5e4dc; --card-chip-fg: #6b7064;
+  --card-line: #d5d4cb; --card-btn: #101110; --card-btn-fg: #f5f4eb;
+  color-scheme: dark;
 }
