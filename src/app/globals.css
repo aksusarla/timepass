@@ -364,3 +364,4 @@ footer .privacy { max-width: 90ch; line-height: 1.6; color: var(--faint); margin
 .langs .n { color: var(--faint); }
 .langs button[aria-pressed="true"] .n { color: inherit; opacity: 0.7; }
 .setup .langs { margin-bottom: 10px; }
+.setup .seg + .muted.small { margin-bottom: 10px; }

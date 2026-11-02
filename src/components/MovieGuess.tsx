@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ALL_LANGS, LANGS, findMovie, usePool, useSearch, type Lang, type Movie } from "@/content/movies";
 import type { SearchIndex } from "@/lib/game";
 import { isCorrectGuess } from "@/lib/game";
-import { pickDeck, remember } from "@/lib/selection";
+import { pickByLevel, remember, type Level } from "@/lib/selection";
 import { useFilmLang } from "@/lib/lang";
 import { newRoomId, nowMs, secondsSince, track } from "@/lib/analytics";
 import { loadState, saveState, usePersistentState } from "@/lib/store";
@@ -29,7 +29,8 @@ type Pool = "te" | "ta" | "both";
 // mode: "teams" = host-led on one phone; "solo" = one player types answers.
 // Missing in older saves = teams (PRD v0.3 tab, CR-6).
 type Mode = "teams" | "solo";
-type Setup = { pool: Pool; rounds: 5 | 10; teams: string[]; autoNext?: boolean; mode?: Mode };
+// level: Data Team difficulty mix (missing in older saves = "mix").
+type Setup = { pool: Pool; rounds: 5 | 10; teams: string[]; autoNext?: boolean; mode?: Mode; level?: Level };
 type RoundResult = { movieId: string; winner: string | null; points: number };
 type Award = { winner: string | null; points: number };
 
@@ -97,7 +98,7 @@ export default function MovieGuess() {
     unlockAudio();
     // Random films this device has not played yet (see src/lib/selection.ts).
     const seen = loadState<string[]>(SEEN_KEY, []);
-    const deckIds = pickDeck(poolFor(langsOf(setup.pool)), setup.rounds, seen).map((m) => m.id);
+    const deckIds = pickByLevel(poolFor(langsOf(setup.pool)), setup.rounds, setup.level ?? "mix", seen).map((m) => m.id);
     saveState(SEEN_KEY, remember(seen, deckIds));
     const roomId = fresh || !s.roomId ? newRoomId() : s.roomId;
     const t = nowMs();
@@ -127,7 +128,10 @@ export default function MovieGuess() {
   if (s.phase === "setup" || deck.length === 0) {
     // The language comes from the site-wide choice (home page or the picker on this screen).
     const setup = { ...s.setup, pool: filmLang };
-    return <SetupScreen setup={setup} poolSize={poolFor(langsOf(filmLang)).length} setSetup={(next) => setS({ ...s, setup: next })} onStart={start} />;
+    const films = poolFor(langsOf(filmLang));
+    const byLevel = { easy: 0, medium: 0, hard: 0 };
+    for (const m of films) byLevel[m.difficulty === 3 ? "hard" : m.difficulty === 2 ? "medium" : "easy"]++;
+    return <SetupScreen setup={setup} poolSize={films.length} byLevel={byLevel} setSetup={(next) => setS({ ...s, setup: next })} onStart={start} />;
   }
 
   if (s.phase === "final") {
@@ -211,11 +215,13 @@ export default function MovieGuess() {
 function SetupScreen({
   setup,
   poolSize,
+  byLevel,
   setSetup,
   onStart,
 }: {
   setup: Setup;
   poolSize: number;
+  byLevel: Record<"easy" | "medium" | "hard", number>;
   setSetup: (s: Setup) => void;
   onStart: (s: Setup) => void;
 }) {
@@ -238,6 +244,28 @@ function SetupScreen({
       <div className="stack">
         <span className="label">Films in · {poolSize} to guess</span>
         <LangPicker value={setup.pool} />
+      </div>
+
+      <div className="stack">
+        <span className="label">How hard</span>
+        <Seg<Level>
+          label="How hard"
+          value={setup.level ?? "mix"}
+          onChange={(level) => setSetup({ ...setup, level })}
+          options={[
+            { value: "easy", label: "Easy" },
+            { value: "mix", label: "Mixed" },
+            { value: "hard", label: "Hard" },
+          ]}
+        />
+        <p className="muted small">
+          {(setup.level ?? "mix") === "mix"
+            ? "Starts with hits, ends with tougher films."
+            : setup.level === "hard"
+              ? `Lesser-known films first${byLevel.hard < 5 ? " (more are being added)" : ""}.`
+              : "Big hits everyone knows."}{" "}
+          {byLevel.easy} easy · {byLevel.medium} medium · {byLevel.hard} hard
+        </p>
       </div>
 
       <div className="stack">
@@ -280,7 +308,7 @@ function SetupScreen({
           Start game
         </button>
         <p className="summary">
-          {solo ? "Solo" : `${setup.teams.length} teams`} · {rounds} rounds · {poolLabel(setup.pool)} films
+          {solo ? "Solo" : `${setup.teams.length} teams`} · {rounds} rounds · {poolLabel(setup.pool)} films · {({ easy: "easy", mix: "mixed", hard: "hard", medium: "medium" } as const)[setup.level ?? "mix"]}
         </p>
       </div>
 
