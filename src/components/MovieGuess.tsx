@@ -10,12 +10,13 @@ import { loadState, saveState, usePersistentState } from "@/lib/store";
 import { beep, buzz, unlockAudio, useWakeLock } from "@/lib/device";
 import { Board, Countdown, GameTools, HowToPlay, NameList, Seg, ShareCard, TitleInput, Words, speak, stopSpeaking } from "./ui";
 
-// PRD section 7: storyline -> hero -> heroine -> director -> reveal.
+// PRD section 7 (CEO change, 2 Nov): storyline -> director -> heroine -> hero -> reveal.
+// The hero goes last because he gives the film away fastest.
 const CLUES: { key: keyof Movie; label: string; pts: number }[] = [
   { key: "storyline", label: "The story", pts: 4 },
-  { key: "hero", label: "Hero", pts: 3 },
+  { key: "director", label: "Director", pts: 3 },
   { key: "heroine", label: "Heroine", pts: 2 },
-  { key: "director", label: "Director", pts: 1 },
+  { key: "hero", label: "Hero", pts: 1 },
 ];
 const CLUE_SECONDS = 20;
 const GRACE_SECONDS = 3;
@@ -250,7 +251,7 @@ function SetupScreen({
           steps={[
             "Read the story clue, then type the film's name.",
             "Pick it from the list, so spelling never costs you.",
-            "Wrong, or tapped Skip? The next clue opens: hero, heroine, then director. Earlier guesses score more: 4, 3, 2, 1.",
+            "Wrong, or tapped Skip? The next clue opens: director, heroine, then hero. Earlier guesses score more: 4, 3, 2, 1.",
           ]}
         />
       ) : (
@@ -259,7 +260,7 @@ function SetupScreen({
           title="How to play"
           steps={[
             "The host reads the story clue out loud (or taps Read aloud).",
-            "Nobody got it? Tap Next clue for the hero, then heroine, then director.",
+            "Nobody got it? Tap Next clue for the director, then heroine, then hero.",
             "Tap the team that guessed right. Earlier clues score more: 4, 3, 2, 1.",
           ]}
         />
@@ -563,13 +564,13 @@ function Round({
                 <b>{movie.year}</b> · {movie.genre}
               </span>
               <span>
-                Hero <b>{movie.hero}</b>
+                Director <b>{movie.director}</b>
               </span>
               <span>
                 Heroine <b>{movie.heroine}</b>
               </span>
               <span>
-                Director <b>{movie.director}</b>
+                Hero <b>{movie.hero}</b>
               </span>
             </div>
           </div>
